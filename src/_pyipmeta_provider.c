@@ -21,7 +21,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "_pyipmeta_provider.h"
+#include "_pyipmeta_record.h"
 #include "pyutils.h"
+#include <arpa/inet.h>
 #include <libipmeta.h>
 #include <Python.h>
 
@@ -84,7 +86,82 @@ Provider_repr(PyObject *pyself)
     PyString_Format(pystr, arg_tuple);
 }
 
+/* Look up an IP address or a prefix */
+static PyObject *
+Provider_lookup(ProviderObject *self, PyObject *args)
+{
+  char *addrstr = NULL;
+  /* get the prefix/address argument */
+  if (!PyArg_ParseTuple(args, "s", &addrstr)) {
+    return NULL;
+  }
+
+  /* extract the mask from the prefix */
+  char *mask_str = addrstr;
+  uint8_t mask;
+  if((mask_str = strchr(addrstr, '/')) != NULL) {
+    *mask_str = '\0';
+    mask_str++;
+    mask = atoi(mask_str);
+  } else {
+    mask = 32;
+  }
+  uint32_t addr = inet_addr(addrstr);
+
+  /* create a list */
+  PyObject *list = NULL;
+  if((list = PyList_New(0)) == NULL)
+    return NULL;
+
+  ipmeta_record_t *record = NULL;
+  ipmeta_record_set_t *set = NULL;
+
+  if (mask == 32) {
+    if ((record = ipmeta_lookup_single(self->prov, addr)) == NULL) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
+      goto err;
+    }
+    if(PyList_Append(list, Record_new(record, 1)) == -1) {
+      goto err;
+    }
+  } else {
+    // a bit inefficient, but we create a record set just for this single use
+    if ((set = ipmeta_record_set_init()) == NULL) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to create record set");
+      goto err;
+    }
+    if (ipmeta_lookup(self->prov, addr, mask, set)) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
+      goto err;
+    }
+    ipmeta_record_set_rewind(set);
+    uint32_t num_ips = 0;
+    while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
+      if(PyList_Append(list, Record_new(record, num_ips)) == -1) {
+        goto err;
+      }
+    }
+    ipmeta_record_set_free(&set);
+  }
+
+  return list;
+
+ err:
+  ipmeta_record_set_free(&set);
+  if (list != NULL) {
+    Py_DECREF(list);
+  }
+  return NULL;
+}
+
 static PyMethodDef Provider_methods[] = {
+
+  {
+    "lookup",
+    (PyCFunction)Provider_lookup,
+    METH_VARARGS,
+    "Look up metadata for an IP address or prefix"
+  },
 
   {NULL}  /* Sentinel */
 };

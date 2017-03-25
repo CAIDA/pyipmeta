@@ -23,6 +23,7 @@
 
 #include "_pyipmeta_ipmeta.h"
 #include "_pyipmeta_provider.h"
+#include "_pyipmeta_record.h"
 #include <Python.h>
 
 static PyMethodDef module_methods[] = {
@@ -78,8 +79,11 @@ static PyObject *moduleinit(void)
   /* IpMeta object */
   ADD_OBJECT(ipmeta, IpMeta);
 
-    /* ipmeta provider object */
+  /* ipmeta provider object */
   ADD_OBJECT(provider, Provider);
+
+  /* ipmeta record object */
+  ADD_OBJECT(record, Record);
 
   return m;
 }
@@ -92,7 +96,7 @@ PyInit__pyipmeta(void)
 }
 #else
 PyMODINIT_FUNC
-init_ipmeta(void)
+init_pyipmeta(void)
 {
   moduleinit();
 }

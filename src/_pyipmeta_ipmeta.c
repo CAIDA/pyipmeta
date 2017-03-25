@@ -20,6 +20,7 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "_pyipmeta_provider.h"
 #include "pyutils.h"
 #include <libipmeta.h>
 #include <Python.h>
@@ -32,9 +33,9 @@ typedef struct {
 
 } IpMetaObject;
 
-#define IPMetaDocstring "IpMeta object"
+#define IpMetaDocstring "IpMeta object"
 
-#define IPMetaTypeName "_pyipmeta.IpMeta"
+#define IpMetaTypeName "_pyipmeta.IpMeta"
 
 
 static void
@@ -70,8 +71,6 @@ IpMeta_init(IpMetaObject *self,
 {
   return 0;
 }
-
-// HERE
 
 /** Enable the given lookup provider */
 static PyObject *
@@ -167,32 +166,6 @@ IpMeta_get_all_providers(IpMetaObject *self)
   return list;
 }
 
-/* Look up an IP address or a prefix */
-static PyObject *
-IpMeta_lookup(IpMetaObject *self, PyObject *args)
-{
-  ProviderObject *pyprov = NULL;
-  const char *pfxstr = NULL;
-
-  /* get the Provider argument */
-  if (!PyArg_ParseTuple(args, "O!|s",
-                        _pyipmeta_provider_get_ProviderType(),
-                        &pyprov, &pfxstr)) {
-    return NULL;
-  }
-
-  // TODO: detect if pfxstr is an IP or a prefix (strchr)
-  // TODO: Convert IP string to uint32_t
-
-  if (ipmeta_lookup_single(self->ipm, pyprov->prov, 0) != 0) {
-    PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address %s",
-                    pfxstr);
-    return NULL;
-  }
-
-  Py_RETURN_NONE;
-}
-
 static PyMethodDef IpMeta_methods[] = {
 
   {
@@ -222,14 +195,6 @@ static PyMethodDef IpMeta_methods[] = {
     METH_NOARGS,
     "Get a list of all available providers"
   },
-
-  {
-    "lookup",
-    (PyCFunction)IpMeta_lookup,
-    METH_VARARGS,
-    "Look up metadata for an IP address or prefix"
-  },
-
 
   {NULL}  /* Sentinel */
 };

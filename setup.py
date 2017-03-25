@@ -2,8 +2,10 @@ from setuptools import setup, Extension, find_packages
 
 _pyipmeta_module = Extension("_pyipmeta",
                              libraries=["ipmeta"],
-                             sources=["src/_pyipmeta_ipmeta.c",
-                                      "src/_pyipmeta_provider.c"])
+                             sources=["src/_pyipmeta_module.c",
+                                      "src/_pyipmeta_ipmeta.c",
+                                      "src/_pyipmeta_provider.c",
+                                      "src/_pyipmeta_record.c"])
 
 setup(name="pyipmeta",
       description="A Python interface to libipmeta",
