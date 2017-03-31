@@ -115,31 +115,38 @@ Provider_lookup(ProviderObject *self, PyObject *args)
 
   ipmeta_record_t *record = NULL;
   ipmeta_record_set_t *set = NULL;
+  PyObject *pyrec = NULL;
 
   if (mask == 32) {
     if ((record = ipmeta_lookup_single(self->prov, addr)) == NULL) {
       PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
       goto err;
     }
-    if(PyList_Append(list, Record_new(record, 1)) == -1) {
+    pyrec = Record_new(record, 1);
+    if(PyList_Append(list, pyrec) == -1) {
       goto err;
     }
+    Py_DECREF(pyrec);
+    pyrec = NULL;
   } else {
     // a bit inefficient, but we create a record set just for this single use
     if ((set = ipmeta_record_set_init()) == NULL) {
       PyErr_SetString(PyExc_RuntimeError, "Failed to create record set");
       goto err;
     }
-    if (ipmeta_lookup(self->prov, addr, mask, set)) {
+    if (ipmeta_lookup(self->prov, addr, mask, set) < 0) {
       PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
       goto err;
     }
     ipmeta_record_set_rewind(set);
     uint32_t num_ips = 0;
     while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
-      if(PyList_Append(list, Record_new(record, num_ips)) == -1) {
+      pyrec = Record_new(record, num_ips);
+      if(PyList_Append(list, pyrec) == -1) {
         goto err;
       }
+      Py_DECREF(pyrec);
+      pyrec = NULL;
     }
     ipmeta_record_set_free(&set);
   }
@@ -150,6 +157,9 @@ Provider_lookup(ProviderObject *self, PyObject *args)
   ipmeta_record_set_free(&set);
   if (list != NULL) {
     Py_DECREF(list);
+  }
+  if (pyrec != NULL) {
+    Py_DECREF(pyrec);
   }
   return NULL;
 }

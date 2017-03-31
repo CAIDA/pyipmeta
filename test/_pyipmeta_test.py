@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import _pyipmeta
+import json
 
 
 ipm = _pyipmeta.IpMeta()
@@ -33,6 +34,51 @@ print
 
 # try to enable the maxmind provider with incorrect options
 print "Enabling Maxmind provider (with incorrect options):"
-print ipm.enable_provider(prov, "develop")
+print ipm.enable_provider(prov, "invalid options")
 print prov
+print
+
+# now enable maxmind provider with some test data
+print "Enabling Maxmind provider (using included test data):"
+print ipm.enable_provider(prov, "-b ./test/maxmind/2017-03-16.GeoLiteCity-Blocks.csv.gz -l ./test/maxmind/2017-03-16.GeoLiteCity-Location.csv.gz")
+print prov
+print
+
+# and then look up an IP address
+print "Querying Maxmind for an IP address (192.172.226.97):"
+(res,) = prov.lookup("192.172.226.97")
+print res
+print "Result in JSON format:"
+print json.dumps(res.as_dict())
+print
+
+# and a prefix
+print "Querying Maxmind for a prefix (44.0.0.0/8):"
+results = prov.lookup("44.0.0.0/8")
+print results
+print "Results in JSON format:"
+print json.dumps([res.as_dict() for res in results])
+print
+
+# take the pfx2as provider for a spin
+print "Getting/enabling pfx2as provider (using included test data)"
+prov = ipm.get_provider_by_name("pfx2as")
+print prov
+print ipm.enable_provider(prov, "-f ./test/pfx2as/routeviews-rv2-20170329-0200.pfx2as.gz")
+print
+
+# and look up an IP address
+print "Querying pfx2as for an IP address (192.172.226.97):"
+(res,) = prov.lookup("192.172.226.97")
+print res
+print "Result in JSON format:"
+print json.dumps(res.as_dict())
+print
+
+# and a prefix
+print "Querying pfx2as for a prefix (44.0.0.0/8):"
+results = prov.lookup("44.0.0.0/8")
+print results
+print "Results in JSON format:"
+print json.dumps([res.as_dict() for res in results])
 print

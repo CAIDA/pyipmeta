@@ -50,9 +50,11 @@
 
 #define RecordDocstring "IpMeta Record object"
 
+#define PYSTR_SAFE(cstr) ((cstr) ? PYSTR_FROMSTR(cstr) : PYSTR_FROMSTR(""))
+
 static void Record_dealloc(RecordObject *self)
 {
-  /* we don't own the ipmeta record object */
+  self->rec = NULL;
   Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -70,37 +72,49 @@ static PyObject *Record_get_id(RecordObject *self, void *closure)
 /* country code (iso2) */
 static PyObject *Record_get_country_code(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->country_code);
+  return PYSTR_SAFE(self->rec->country_code);
 }
 
 /* continent code */
 static PyObject *Record_get_continent_code(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->continent_code);
+  return PYSTR_SAFE(self->rec->continent_code);
 }
 
 /* region */
 static PyObject *Record_get_region(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->region);
+  return PYSTR_SAFE(self->rec->region);
 }
 
 /* city */
 static PyObject *Record_get_city(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->city);
+  return PYSTR_SAFE(self->rec->city);
 }
 
 /* post code */
 static PyObject *Record_get_post_code(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->post_code);
+  return PYSTR_SAFE(self->rec->post_code);
 }
 
 /* lat/long */
 static PyObject *Record_get_lat_long(RecordObject *self, void *closure)
 {
   return Py_BuildValue("dd", self->rec->latitude, self->rec->longitude);
+}
+
+/* lat */
+static PyObject *Record_get_lat(RecordObject *self, void *closure)
+{
+  return Py_BuildValue("d", self->rec->latitude);
+}
+
+/* long */
+static PyObject *Record_get_long(RecordObject *self, void *closure)
+{
+  return Py_BuildValue("d", self->rec->longitude);
 }
 
 /* metro code */
@@ -118,14 +132,13 @@ static PyObject *Record_get_area_code(RecordObject *self, void *closure)
 /* region code */
 static PyObject *Record_get_region_code(RecordObject *self, void *closure)
 {
-  // TODO: check format string for uint16_t
-  return Py_BuildValue("FIXME", self->rec->region_code);
+  return Py_BuildValue("H", self->rec->region_code);
 }
 
 /* connection speed */
 static PyObject *Record_get_connection_speed(RecordObject *self, void *closure)
 {
-  return PYSTR_FROMSTR(self->rec->conn_speed);
+  return PYSTR_SAFE(self->rec->conn_speed);
 }
 
 /* asn list */
@@ -183,7 +196,47 @@ static PyObject *Record_get_matched_ip_count(RecordObject *self, void *closure)
   return Py_BuildValue("k", self->num_ips);
 }
 
+static PyObject *
+Record_as_dict(PyObject *pyself)
+{
+  RecordObject *self = (RecordObject *)pyself;
+
+  /* create the dictionary */
+  PyObject *dict = PyDict_New();
+  if (dict == NULL)
+    return NULL;
+
+  add_to_dict(dict, "id", Record_get_id(self, NULL));
+  add_to_dict(dict, "country_code", Record_get_country_code(self, NULL));
+  add_to_dict(dict, "continent_code", Record_get_continent_code(self, NULL));
+  add_to_dict(dict, "region", Record_get_region(self, NULL));
+  add_to_dict(dict, "city", Record_get_city(self, NULL));
+  add_to_dict(dict, "post_code", Record_get_post_code(self, NULL));
+  add_to_dict(dict, "lat_long", Record_get_lat_long(self, NULL));
+  add_to_dict(dict, "metro_code", Record_get_metro_code(self, NULL));
+  add_to_dict(dict, "area_code", Record_get_area_code(self, NULL));
+  add_to_dict(dict, "region_code", Record_get_region_code(self, NULL));
+  add_to_dict(dict, "connection_speed",
+              Record_get_connection_speed(self, NULL));
+  add_to_dict(dict, "asns", Record_get_asns(self, NULL));
+  add_to_dict(dict, "asn_ip_count", Record_get_asn_ip_count(self, NULL));
+  add_to_dict(dict, "polygon_ids", Record_get_polygon_ids(self, NULL));
+  add_to_dict(dict, "matched_ip_count",
+              Record_get_matched_ip_count(self, NULL));
+
+  return dict;
+}
+
 static PyMethodDef Record_methods[] = {
+
+  {
+    "as_dict",
+    (PyCFunction)Record_as_dict,
+    METH_VARARGS,
+    "Convert the Record to a standard dict "
+    "(useful for printing or conversion to json)"
+  },
+
   {NULL} /* Sentinel */
 };
 
@@ -211,6 +264,12 @@ static PyGetSetDef Record_getsetters[] = {
 
   /* lat/long */
   {"lat_long", (getter)Record_get_lat_long, NULL, "(Lat, Long)", NULL},
+
+  /* lat */
+  {"latitude", (getter)Record_get_lat, NULL, "Latitude", NULL},
+
+  /* long */
+  {"longitude", (getter)Record_get_long, NULL, "Longitude", NULL},
 
   /* metro code */
   {"metro_code", (getter)Record_get_metro_code, NULL, "Metro Code", NULL},

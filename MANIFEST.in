@@ -1,2 +1,4 @@
 include src/*.h
 include test/_pyipmeta_test.py
+include test/maxmind/*
+include test/pfx2as/*
