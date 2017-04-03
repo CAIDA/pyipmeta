@@ -27,21 +27,7 @@
 
 #include <libipmeta.h>
 
-typedef struct {
-  PyObject_HEAD
-
-  /* Record instance Handle */
-  ipmeta_record_t *rec;
-
-  /* number of IPs of the queried prefix that this record covers */
-  uint32_t num_ips;
-
-} RecordObject;
-
-/** Expose the RecordType structure */
-PyTypeObject *_pyipmeta_record_get_RecordType(void);
-
-/** Expose our new function as it is not exposed to Python */
-PyObject *Record_new(ipmeta_record_t *rec, uint32_t num_ips);
+/** Convert an IP Meta record into a dictionary */
+PyObject *_pyipmeta_record_as_dict(ipmeta_record_t *rec, uint32_t num_ips);
 
 #endif /* ___pyipmeta_record_H */

@@ -49,7 +49,7 @@ print "Querying Maxmind for an IP address (192.172.226.97):"
 (res,) = prov.lookup("192.172.226.97")
 print res
 print "Result in JSON format:"
-print json.dumps(res.as_dict())
+print json.dumps(res)
 print
 
 # and a prefix
@@ -57,7 +57,7 @@ print "Querying Maxmind for a prefix (44.0.0.0/8):"
 results = prov.lookup("44.0.0.0/8")
 print results
 print "Results in JSON format:"
-print json.dumps([res.as_dict() for res in results])
+print json.dumps(results)
 print
 
 # take the pfx2as provider for a spin
@@ -72,7 +72,7 @@ print "Querying pfx2as for an IP address (192.172.226.97):"
 (res,) = prov.lookup("192.172.226.97")
 print res
 print "Result in JSON format:"
-print json.dumps(res.as_dict())
+print json.dumps(res)
 print
 
 # and a prefix
@@ -80,5 +80,5 @@ print "Querying pfx2as for a prefix (44.0.0.0/8):"
 results = prov.lookup("44.0.0.0/8")
 print results
 print "Results in JSON format:"
-print json.dumps([res.as_dict() for res in results])
+print json.dumps(results)
 print

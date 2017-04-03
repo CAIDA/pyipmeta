@@ -1,3 +1,4 @@
+
 /*
  * This file is part of pyipmeta
  *
@@ -81,9 +82,6 @@ static PyObject *moduleinit(void)
 
   /* ipmeta provider object */
   ADD_OBJECT(provider, Provider);
-
-  /* ipmeta record object */
-  ADD_OBJECT(record, Record);
 
   return m;
 }

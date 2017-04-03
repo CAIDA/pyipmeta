@@ -122,7 +122,7 @@ Provider_lookup(ProviderObject *self, PyObject *args)
       PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
       goto err;
     }
-    pyrec = Record_new(record, 1);
+    pyrec = _pyipmeta_record_as_dict(record, 1);
     if(PyList_Append(list, pyrec) == -1) {
       goto err;
     }
@@ -141,7 +141,7 @@ Provider_lookup(ProviderObject *self, PyObject *args)
     ipmeta_record_set_rewind(set);
     uint32_t num_ips = 0;
     while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
-      pyrec = Record_new(record, num_ips);
+      pyrec = _pyipmeta_record_as_dict(record, num_ips);
       if(PyList_Append(list, pyrec) == -1) {
         goto err;
       }
