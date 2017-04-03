@@ -76,8 +76,8 @@ print json.dumps(res)
 print
 
 # and a prefix
-print "Querying pfx2as for a prefix (44.0.0.0/8):"
-results = prov.lookup("44.0.0.0/8")
+print "Querying pfx2as for a prefix (192.172.226.0/24):"
+results = prov.lookup("192.172.226.0/24")
 print results
 print "Results in JSON format:"
 print json.dumps(results)
