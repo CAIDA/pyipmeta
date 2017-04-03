@@ -115,7 +115,7 @@ IpMeta_get_provider_by_id(IpMetaObject *self, PyObject *args)
     Py_RETURN_NONE;
   }
 
-  return Provider_new(prov);
+  return Provider_new((PyObject*)self, prov);
 }
 
 /** Get the provider with the given name */
@@ -134,7 +134,7 @@ IpMeta_get_provider_by_name(IpMetaObject *self, PyObject *args)
     Py_RETURN_NONE;
   }
 
-  return Provider_new(prov);
+  return Provider_new((PyObject*)self, prov);
 }
 
 /** Get the all available providers */
@@ -157,7 +157,7 @@ IpMeta_get_all_providers(IpMetaObject *self)
   for(i=0; i<IPMETA_PROVIDER_MAX; i++) {
     if (provs[i] != NULL) {
       /* add provider to list */
-      if(PyList_Append(list, Provider_new(provs[i])) == -1) {
+      if(PyList_Append(list, Provider_new((PyObject*)self, provs[i])) == -1) {
         return NULL;
       }
     }

@@ -34,6 +34,8 @@
 static void
 Provider_dealloc(ProviderObject *self)
 {
+  Py_DECREF(self->pyipm);
+  self->pyipm = NULL;
   self->prov = NULL;
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -252,7 +254,7 @@ PyTypeObject *_pyipmeta_provider_get_ProviderType()
 }
 
 /* only available to c code */
-PyObject *Provider_new(ipmeta_provider_t *prov)
+PyObject *Provider_new(PyObject *pyipm, ipmeta_provider_t *prov)
 {
   ProviderObject *self;
 
@@ -261,6 +263,10 @@ PyObject *Provider_new(ipmeta_provider_t *prov)
     return NULL;
   }
 
+  // claim a reference to the IpMeta instance, since destroying the IpMeta
+  // instance also destroys the provider.
+  Py_INCREF(pyipm);
+  self->pyipm = pyipm;
   self->prov = prov;
 
   return (PyObject *)self;

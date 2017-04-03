@@ -20,16 +20,17 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef ___pyipmeta_provider_H
+#define ___pyipmeta_provider_H
 
 #include <Python.h>
-
-#ifndef ___pyipmeta_provider_H
-#define ___pyipmeta_provder_H
-
 #include <libipmeta.h>
 
 typedef struct {
   PyObject_HEAD
+
+  /* IpMeta handle */
+  PyObject *pyipm;
 
   /* Provider instance Handle */
   ipmeta_provider_t *prov;
@@ -40,6 +41,6 @@ typedef struct {
 PyTypeObject *_pyipmeta_provider_get_ProviderType(void);
 
 /** Expose our new function as it is not exposed to Python */
-PyObject *Provider_new(ipmeta_provider_t *prov);
+PyObject *Provider_new(PyObject *pyipm, ipmeta_provider_t *prov);
 
 #endif /* ___pyipmeta_provider_H */
