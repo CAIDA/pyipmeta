@@ -92,9 +92,16 @@ Provider_repr(PyObject *pyself)
 static PyObject *
 Provider_lookup(ProviderObject *self, PyObject *args)
 {
-  char *addrstr = NULL;
+  const char *pyaddrstr = NULL;
   /* get the prefix/address argument */
-  if (!PyArg_ParseTuple(args, "s", &addrstr)) {
+  if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
+    return NULL;
+  }
+
+  /* we need to copy the string because python is trusting that we don't mess
+     with it */
+  char *addrstr = strdup(pyaddrstr);
+  if (!addrstr) {
     return NULL;
   }
 
