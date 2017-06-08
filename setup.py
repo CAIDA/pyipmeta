@@ -27,8 +27,8 @@ setup(name="pyipmeta",
       keywords='_pyipmeta pyipmeta geolocation pfx2as',
       ext_modules=[_pyipmeta_module],
       packages=find_packages(),
-      # entry_points={'console_scripts': [
-      #     'pyipmeta=pyipmeta.lookup:main'
-      # ]},
-      install_requires=[]
+      entry_points={'console_scripts': [
+           'pyipmeta-http-server=pyipmeta.httpapi:main'
+       ]},
+      install_requires=['flask']
       )
