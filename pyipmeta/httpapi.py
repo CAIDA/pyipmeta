@@ -5,30 +5,61 @@ import _pyipmeta
 
 
 app = flask.Flask("IPMeta Server")
-dummy = {
-    "country": "NZ"
+
+base_response = {
+    "type": "metadata.lookup",
+    "error": None,
+    "queryParameters": {},
+    "data": None
 }
 
 ipm = _pyipmeta.IpMeta()
 prov = None
 
 
-@app.route('/metadata/lookup/ip/<string:ip_addr>', methods=['GET', 'POST'])
-@app.route('/metadata/lookup/ip/<string:ip_addr>/<string:prefix_len>',
+def clean_res(res_list):
+    dedup = {}
+    for res in res_list:
+        if "id" not in res:
+            continue
+        if res["id"] in dedup:
+            dedup[res["id"]]["matched_ips"] += res["matched_ips"]
+            continue
+        dedup[res["id"]] = {
+            "type": "ipgeo",
+            "continent_code": res["continent_code"],
+            "country_code": res["country_code"],
+        }
+    return dedup.values()
+
+
+@app.route('/metadata/lookup/ipgeo/<string:ip_addr>', methods=['GET', 'POST'])
+@app.route('/metadata/lookup/ipgeo/<string:ip_addr>/<string:prefix_len>',
            methods=['GET', 'POST'])
 def lookup_pfx(ip_addr, prefix_len=None):
     if prefix_len:
         ip_addr = "%s/%s" % (ip_addr, prefix_len)
-    res = prov.lookup(ip_addr)
-    if len(res) == 1:
-        res = res[0]
-    return flask.jsonify(res)
+    res_list = prov.lookup(ip_addr)
+    res_list = clean_res(res_list)
+    fr = base_response.copy()
+    fr["data"] = {
+        "metadata": res_list
+    }
+    return flask.jsonify(fr)
 
 
 def main():
     parser = argparse.ArgumentParser(description="""
     Simple HTTP API for performing IP/Prefix geolocation
     """)
+    parser.add_argument('-l',  '--listen-ip',
+                        nargs='?', required=True,
+                        help='IP/Hostname to listen on')
+
+    parser.add_argument('-P',  '--listen-port',
+                        nargs='?', required=True,
+                        help='Port to listen on')
+
     parser.add_argument('-p',  '--provider-name',
                         nargs='?', required=True,
                         help='IPMeta provider name')
@@ -56,4 +87,4 @@ def main():
 
     logging.info("Ready to accept queries")
 
-    app.run()
+    app.run(host=opts["listen_ip"], port=opts["listen_port"])
