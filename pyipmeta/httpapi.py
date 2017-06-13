@@ -29,6 +29,7 @@ def clean_res(res_list):
             "type": "ipgeo",
             "continent_code": res["continent_code"],
             "country_code": res["country_code"],
+            "matched_ips": res["matched_ips"],
         }
     return dedup.values()
 
