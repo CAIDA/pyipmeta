@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import flask
 import logging
@@ -89,3 +91,7 @@ def main():
     logging.info("Ready to accept queries")
 
     app.run(host=opts["listen_ip"], port=opts["listen_port"])
+
+
+if __name__ == "__main__":
+    main()
