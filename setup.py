@@ -28,7 +28,7 @@ setup(name="pyipmeta",
       ext_modules=[_pyipmeta_module],
       packages=find_packages(),
       entry_points={'console_scripts': [
-           'pyipmeta-http-server=pyipmeta.httpapi:main'
-       ]},
-      install_requires=['flask']
+          'pyipmeta-lookup=pyipmeta.pyipmeta:main'
+      ]},
+      install_requires=[]
       )
