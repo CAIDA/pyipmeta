@@ -46,9 +46,10 @@ def main():
     Historical IP/Prefix Metadata tagging tool. Supports Maxmind and Net Acuity Edge
     """)
     parser.add_argument('-p', '--provider',
-                        nargs='?', required=True,
+                        nargs='?', required=False,
                         help="Metadata provider to use ('netacq-edge' or 'maxmind')",
-                        choices=["maxmind", "netacq-edge"])
+                        choices=["maxmind", "netacq-edge"],
+                        default="netacq-edge")
     parser.add_argument('-d', '--date',
                         nargs='?', required=False,
                         help="Date to use for automatic DB selection (default: latest DB)")
