@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import dateutil.parser
 import dbidx
 import json
@@ -29,7 +28,8 @@ class IpMeta:
             # doesn't make sense to specify both provider_config AND time
             raise ValueError("Only one of 'time' and 'provider_config' may be specified")
 
-        self.ipm.enable_provider(self.prov, provider_config)
+        if not self.ipm.enable_provider(self.prov, provider_config):
+            raise RuntimeError("Could not enable provider (check stderr)")
 
     @staticmethod
     def _parse_timestr(timestr):
