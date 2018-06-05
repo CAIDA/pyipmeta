@@ -33,6 +33,10 @@ As far as the time is concerned, note that the parser is quite smart and can sup
 
 3- As ipmeta takes time to be loaded, it makes sens to geolocate several IPs at the same time. 
 
+As an example, the output obtain for the IP 192.172.226.97 is a list under the following format, which can easily be parsed:
+
+```[{'connection_speed': '', 'city': '', 'asn_ip_count': 0, 'post_code': '', 'lat_long': (37.750999450683594, -97.8219985961914), 'region': '', 'area_code': 0, 'asns': [], 'continent_code': 'NA', 'metro_code': 0, 'matched_ip_count': 1, 'region_code': 0, 'country_code': 'US', 'id': 223, 'polygon_ids': []}]```
+
 
 
 
