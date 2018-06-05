@@ -1,3 +1,5 @@
+This file describes the steps followed to use the pyipmeta module.
+
 ## INSTALLATION
 The installation of this module is quite straight forward: 
 
@@ -19,8 +21,9 @@ ipm = pyipmeta.IpMeta(provider="maxmind",
                       provider_config="-b ./test/maxmind/2017-03-16.GeoLiteCity-Blocks.csv.gz -l ./test/maxmind/2017-03-16.GeoLiteCity-Location.csv.gz")
 ```
 you could specify the blocks of the GeoliteCity database saved on a date that is the closest to your considered date for IP geolocation.
+However, this is not the only option. Instead, you can also use the explicit time option.
                       
-2- You should make sure you specify "maxmind" as the provider (either on the previous line or when you use the explicit time option):
+2- Please make sure you specify "maxmind" as the provider (either on the previous line if the explicit config is adopted or on the following one when you choose the explicit time option):
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="Nov 11 2011")```
 
