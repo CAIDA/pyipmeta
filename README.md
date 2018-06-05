@@ -12,7 +12,7 @@ The installation of this module is quite straight forward:
 ## USAGE
 A useful sample script for testing this module is available at ./test/pyipmeta_test.py.
 
-# Maxmind
+### Maxmind
 1- In case, the files "*.GeoLiteCity-Blocks.csv.gz" and "*.GeoLiteCity-Location.csv.gz" are available, you can adopt the explicit config.  On its line 6 i.e 
 ```
 ipm = pyipmeta.IpMeta(provider="maxmind",
@@ -23,6 +23,8 @@ you could specify the blocks of the GeoliteCity database saved on a date that is
 2- You should make sure you specify "maxmind" as the provider (either on the previous line or when you use the explicit time option):
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="Nov 11 2011")```
+
+3- As ipmeta takes time to be loaded, it makes sens to geolocate several IPs at the same time. 
 
 
 
