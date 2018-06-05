@@ -20,7 +20,7 @@ ipm = pyipmeta.IpMeta(provider="maxmind",
 ```
 you could specify the blocks of the GeoliteCity database saved on a date that is the closest to your considered date for IP geolocation.
                       
-2- Make sure you specify "maxmind" as the provider on the previous line. You can also use the explicit time option:
+2- Make sure you specify "maxmind" as the provider either on the previous line or when you use the explicit time option:
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="Nov 11 2011")```
 
