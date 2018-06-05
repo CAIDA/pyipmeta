@@ -27,6 +27,10 @@ However, this is not the only option. Instead, you can also use the explicit tim
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="Nov 11 2011")```
 
+As far as the time is concerned, note that the parser is quite smart and can support the format YYYYMMDD as well. That is to say, the previous line also correspond to the following one:
+
+```ipm = pyipmeta.IpMeta(provider="maxmind", time="20111111")```
+
 3- As ipmeta takes time to be loaded, it makes sens to geolocate several IPs at the same time. 
 
 
