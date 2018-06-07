@@ -31,7 +31,7 @@ As far as the time is concerned, note that the parser is quite smart and can sup
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="20111111")```
 
-3- As initializing the IpMeta object will take some time (because it has to load the database), it makes sens to try and load it once, and then query many times.  
+3- As initializing the IpMeta object will take some time (because it has to load the database), it makes sens to try and load it once, and then query many times. After several tests, we found that the number of IPs not to exceed after loading IpMeta is 1200.   
 
 As an example, the output obtained for the IP 192.172.226.97 (on Nov 11 2011) is a list under the following format, which can easily be parsed:
 
