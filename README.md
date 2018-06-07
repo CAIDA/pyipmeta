@@ -31,13 +31,13 @@ As far as the time is concerned, note that the parser is quite smart and can sup
 
 ```ipm = pyipmeta.IpMeta(provider="maxmind", time="20111111")```
 
-3- As initializing the IpMeta object will take some time (because it has to load the database), it makes sens to try and load it once, and then query many times. After several tests, we found that the number of IPs not to exceed after loading IpMeta is 1200.   
+3- As initializing the IpMeta object will take some time (because it has to load the database), it makes sens to try and load it once, and then query many times. 
 
 As an example, the output obtained for the IP 192.172.226.97 (on Nov 11 2011) is a list under the following format, which can easily be parsed:
 
 ```[{'connection_speed': '', 'city': '', 'asn_ip_count': 0, 'post_code': '', 'lat_long': (37.750999450683594, -97.8219985961914), 'region': '', 'area_code': 0, 'asns': [], 'continent_code': 'NA', 'metro_code': 0, 'matched_ip_count': 1, 'region_code': 0, 'country_code': 'US', 'id': 223, 'polygon_ids': []}]```
 
-
+After several tests, we suggest to reload IpMeta after geolocating around 1200 IPs, to avoid getting the error "Segmentation fault (core dumped)".
 
 
 
