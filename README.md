@@ -5,7 +5,7 @@ Installing from source
 
 1. Clone the project and execute:
 ```
-$ cd pyipmeta-master
+$ cd pyipmeta
 $ python setup.py build_ext
 $ sudo python setup.py install
 ```
