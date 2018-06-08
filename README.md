@@ -1,15 +1,15 @@
 This file describes the steps followed to use the pyipmeta module.
 
-## INSTALLATION
-The installation of this module is quite straight forward: 
+## How do I get set up?
+Installing from source
 
-1- Download/clone the folder "pyipmeta-master"
-
-2- Run "cd pyipmeta-master"
-
-3- Run "python setup.py install"
-
-
+1. Clone the project and execute:
+```
+$ cd pyipmeta-master
+$ python setup.py build_ext
+$ sudo python setup.py install
+```
+Use `python setup.py install --user` to install the library in your home directory.
 
 ## USAGE
 A useful sample script for testing this module is available at ./test/pyipmeta_test.py.
