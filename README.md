@@ -1,6 +1,6 @@
 This file describes the steps to use the pyipmeta module.
 
-**Note:** [[libipmeta|https://github.com/caida/libipmeta]] must be installed prior to installing pyipmeta.
+**Note:** [libipmeta](https://github.com/caida/libipmeta) must be installed prior to installing pyipmeta.
 
 ## How do I get set up?
 Installing from source
