@@ -42,4 +42,6 @@ As an example, the output obtained for the IP 192.172.226.97 (on Nov 11 2011) is
 There is no thresholds on the number of IPs to geolocate after loading IPMeta. For IPs that can not be geolocated, IPMeta returns a python exception. We suggest that you catch these errors and pass in those cases.
 
 
+### Netacuity
+In order to use netacuity for IP geolocation, you just need to change the provider name from "maxmind" to "neacuity" and follow the instructions listed above.
 
