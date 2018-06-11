@@ -39,7 +39,7 @@ As an example, the output obtained for the IP 192.172.226.97 (on Nov 11 2011) is
 
 ```[{'connection_speed': '', 'city': '', 'asn_ip_count': 0, 'post_code': '', 'lat_long': (37.750999450683594, -97.8219985961914), 'region': '', 'area_code': 0, 'asns': [], 'continent_code': 'NA', 'metro_code': 0, 'matched_ip_count': 1, 'region_code': 0, 'country_code': 'US', 'id': 223, 'polygon_ids': []}]```
 
-After several tests, we suggest to reload IpMeta after geolocating around 1200 IPs, to avoid getting the error "Segmentation fault (core dumped)".
+There is no thresholds on the number of IPs to geolocate after loading IPMeta. For IPs that can not be geolocated, IPMeta returns a python exception. We suggest that you catch these errors and pass in those cases.
 
 
 
