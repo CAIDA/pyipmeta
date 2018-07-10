@@ -5,8 +5,9 @@ Quick Start
 
 To get started using PyIPMeta, first [install libipmeta](https://github.com/caida/libipmeta).
 
-## How do I get set up?
-Installing from source
+Then, you should be able to install ***PyIPMeta***.
+
+## Installing PyIPMeta from source
 
 1. Clone the project and execute:
 ```
