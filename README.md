@@ -1,6 +1,9 @@
-This file describes the steps to use the pyipmeta module.
+PyIPMeta is a Python library that provides a high-level interface for historical and realtime geolocation metadata lookups using Maxmind GeoIP and/or NetAcuity (Digital Element) geolocation databases.
 
-**Note:** [libipmeta](https://github.com/caida/libipmeta) must be installed prior to installing pyipmeta.
+Quick Start
+-----------
+
+To get started using PyIPMeta, first [install libipmeta](https://github.com/caida/libipmeta).
 
 ## How do I get set up?
 Installing from source
@@ -14,7 +17,9 @@ $ sudo python setup.py install
 Use `python setup.py install --user` to install the library in your home directory.
 
 ## USAGE
-A useful sample script for testing this module is available at ./test/pyipmeta_test.py.
+A useful sample script for testing this module is available at `./test/pyipmeta_test.py`.
+
+** Notice that if you want to use the library outside CAIDA's facility, you will need first to ask for permission to copy the geo-databases files you may need to perform any processing outside the building. **
 
 ### Maxmind
 1- In case, the files "*.GeoLiteCity-Blocks.csv.gz" and "*.GeoLiteCity-Location.csv.gz" are available, you can adopt the explicit config.  On its line 6 i.e 
@@ -43,5 +48,5 @@ There is no thresholds on the number of IPs to geolocate after loading IPMeta. F
 
 
 ### Netacuity
-In order to use netacuity for IP geolocation, you just need to change the provider name from "maxmind" to "neacuity" and follow the instructions listed above.
+In order to use netacuity for IP geolocation, you just need to change the provider name from "maxmind" to "netacq-edge" and follow the instructions listed above.
 
