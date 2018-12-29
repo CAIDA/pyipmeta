@@ -1,0 +1,12 @@
+[Unit]
+Description=ipmeta server
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /opt/ipmeta/ipmeta-service.py -l 0.0.0.0 -P 80
+WorkingDirectory=/opt/ipmeta/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=sysinit.target
