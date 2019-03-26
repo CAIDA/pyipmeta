@@ -92,6 +92,12 @@ Provider_repr(PyObject *pyself)
 static PyObject *
 Provider_lookup(ProviderObject *self, PyObject *args)
 {
+  if (ipmeta_is_provider_enabled(self->prov) == 0) {
+    PyErr_SetString(PyExc_RuntimeError,
+                    "Cannot perform lookup before provider is enabled.");
+    return NULL;
+  }
+
   const char *pyaddrstr = NULL;
   /* get the prefix/address argument */
   if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
