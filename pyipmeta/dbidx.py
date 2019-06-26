@@ -41,6 +41,7 @@ class DbIdx:
     def _load_dbs(self):
         for line in urllib.request.urlopen("%s/%s" % (self.prov_cfg["file_pfx"],
                                                self.prov_cfg["filelist"])):
+            line = line.decode('utf-8')
             (filename, chksum) = line.strip().split(" ")
             (date, table, filename) = self.prov_cfg["name_parser"](filename)
             if not date:
