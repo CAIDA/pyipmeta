@@ -3,7 +3,7 @@ PyIPMeta is a Python library that provides a high-level interface for historical
 Quick Start
 -----------
 
-To get started using PyIPMeta, first [install libipmeta](https://github.com/caida/libipmeta).
+To get started using PyIPMeta, first [install libipmeta v1.0.0](https://github.com/CAIDA/libipmeta/releases/tag/v1.0.0).
 
 Then, you should be able to install ***PyIPMeta***.
 
