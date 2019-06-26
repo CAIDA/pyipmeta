@@ -1,1 +1,1 @@
-from pyipmeta import *
+from .pyipmeta import *

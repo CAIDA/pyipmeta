@@ -85,8 +85,7 @@ Provider_repr(PyObject *pyself)
     PYSTR_FROMSTR("<"ProviderTypeName" (id: %i, name: %s, enabled: %s)>");
 
   return
-    PyString_Format(pystr, arg_tuple);
-}
+    PYSTR_FORMAT(pystr, arg_tuple);}
 
 /* Look up an IP address or a prefix */
 static PyObject *
