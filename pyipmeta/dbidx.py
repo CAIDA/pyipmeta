@@ -2,7 +2,7 @@ import datetime
 import re
 import sys
 import subprocess
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 # TODO: allow customization of built commands (e.g., no polygon table?)
 # TODO: allow use of special "latest" db
@@ -39,7 +39,7 @@ class DbIdx:
         return cfgs[provider]
 
     def _load_dbs(self):
-        for line in urllib2.urlopen("%s/%s" % (self.prov_cfg["file_pfx"],
+        for line in urllib.request.urlopen("%s/%s" % (self.prov_cfg["file_pfx"],
                                                self.prov_cfg["filelist"])):
             (filename, chksum) = line.strip().split(" ")
             (date, table, filename) = self.prov_cfg["name_parser"](filename)

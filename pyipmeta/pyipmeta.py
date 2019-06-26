@@ -1,6 +1,6 @@
 import argparse
 import dateutil.parser
-import dbidx
+from . import dbidx
 import json
 import _pyipmeta
 
