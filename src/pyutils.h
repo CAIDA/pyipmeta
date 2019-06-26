@@ -42,9 +42,11 @@
 
 #if PY_MAJOR_VERSION > 2
 #define PYSTR_FROMSTR(str) PyUnicode_FromString(str)
+#define PYSTR_FORMAT(str, arg_tuple) PyUnicode_Format(str, arg_tuple)
 #define PYNUM_FROMLONG(num) PyLong_FromLong(num)
 #else
 #define PYSTR_FROMSTR(str) PyString_FromString(str)
+#define PYSTR_FORMAT(str, arg_tuple) PyString_Format(str, arg_tuple)
 #define PYNUM_FROMLONG(num) PyInt_FromLong(num)
 #endif
 
