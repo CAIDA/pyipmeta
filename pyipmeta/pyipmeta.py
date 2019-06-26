@@ -78,7 +78,7 @@ def main():
 
 
 def do_lookup(ipm, addr):
-    print json.dumps({
+    print(json.dumps({
         "query": addr,
         "result": ipm.lookup(addr),
-    })
+    }))
