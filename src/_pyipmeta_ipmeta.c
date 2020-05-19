@@ -21,7 +21,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "_pyipmeta_provider.h"
+#include "_pyipmeta_record.h"
 #include "pyutils.h"
+#include <arpa/inet.h>
 #include <libipmeta.h>
 #include <Python.h>
 
@@ -57,7 +59,7 @@ IpMeta_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return NULL;
   }
 
-  if ((self->ipm = ipmeta_init()) == NULL) {
+  if ((self->ipm = ipmeta_init(IPMETA_DS_DEFAULT)) == NULL) {
     Py_DECREF(self);
     return NULL;
   }
@@ -91,8 +93,7 @@ IpMeta_enable_provider(IpMetaObject *self, PyObject *args)
     return NULL;
   }
 
-  if (ipmeta_enable_provider(self->ipm, pyprov->prov, optstr,
-                             IPMETA_PROVIDER_DEFAULT_NO) == 0) {
+  if (ipmeta_enable_provider(self->ipm, pyprov->prov, optstr) == 0) {
     Py_RETURN_TRUE;
   }
 
@@ -166,6 +167,85 @@ IpMeta_get_all_providers(IpMetaObject *self)
   return list;
 }
 
+/* Look up an IP address or a prefix */
+static PyObject *
+IpMeta_lookup(IpMetaObject *self, PyObject *args)
+{
+  const char *pyaddrstr = NULL;
+  /* get the prefix/address argument */
+  if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
+    return NULL;
+  }
+
+  /* we need to copy the string because python is trusting that we don't mess
+     with it */
+  char *addrstr = strdup(pyaddrstr);
+  if (!addrstr) {
+    return NULL;
+  }
+
+  /* extract the mask from the prefix */
+  char *mask_str = addrstr;
+  uint8_t mask;
+  if((mask_str = strchr(addrstr, '/')) != NULL) {
+    *mask_str = '\0';
+    mask_str++;
+    mask = atoi(mask_str);
+  } else {
+    mask = 32;
+  }
+  uint32_t addr = inet_addr(addrstr);
+
+  /* create a list */
+  PyObject *list = NULL;
+  if((list = PyList_New(0)) == NULL)
+    return NULL;
+
+  ipmeta_record_set_t *set = NULL;
+  // a bit inefficient, but we create a record set just for this single use
+  if ((set = ipmeta_record_set_init()) == NULL) {
+    PyErr_SetString(PyExc_RuntimeError, "Failed to create record set");
+    goto err;
+  }
+  PyObject *pyrec = NULL;
+
+  if (mask == 32) {
+    if (ipmeta_lookup_single(self->ipm, addr, 0, set) < 0) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
+      goto err;
+    }
+  } else {
+    if (ipmeta_lookup(self->ipm, addr, mask, 0, set) < 0) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
+      goto err;
+    }
+  }
+  ipmeta_record_set_rewind(set);
+  ipmeta_record_t *record = NULL;
+  uint32_t num_ips = 0;
+  while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
+    pyrec = _pyipmeta_record_as_dict(record, num_ips);
+    if(PyList_Append(list, pyrec) == -1) {
+      goto err;
+    }
+    Py_DECREF(pyrec);
+    pyrec = NULL;
+  }
+  ipmeta_record_set_free(&set);
+
+  return list;
+
+ err:
+  ipmeta_record_set_free(&set);
+  if (list != NULL) {
+    Py_DECREF(list);
+  }
+  if (pyrec != NULL) {
+    Py_DECREF(pyrec);
+  }
+  return NULL;
+}
+
 static PyMethodDef IpMeta_methods[] = {
 
   {
@@ -194,6 +274,13 @@ static PyMethodDef IpMeta_methods[] = {
     (PyCFunction)IpMeta_get_all_providers,
     METH_NOARGS,
     "Get a list of all available providers"
+  },
+
+  {
+    "lookup",
+    (PyCFunction)IpMeta_lookup,
+    METH_VARARGS,
+    "Look up metadata for an IP address or prefix"
   },
 
   {NULL}  /* Sentinel */
