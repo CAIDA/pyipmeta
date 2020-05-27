@@ -1,8 +1,6 @@
 from setuptools import setup, Extension, find_packages
 
 _pyipmeta_module = Extension("_pyipmeta",
-                             include_dirs=["/home/kkeys/prefix2as/installed-libipmeta2/include"],
-                             library_dirs=["/home/kkeys/prefix2as/installed-libipmeta2/lib"],
                              libraries=["ipmeta"],
                              sources=["src/_pyipmeta_module.c",
                                       "src/_pyipmeta_ipmeta.c",
