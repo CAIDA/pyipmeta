@@ -33,6 +33,9 @@ typedef struct {
   /* libipmeta Instance Handle */
   ipmeta_t *ipm;
 
+  /* reusable record set */
+  ipmeta_record_set_t *recordset;
+
 } IpMetaObject;
 
 #define IpMetaDocstring "IpMeta object"
@@ -46,6 +49,9 @@ IpMeta_dealloc(IpMetaObject *self)
   if (self->ipm != NULL) {
       ipmeta_free(self->ipm);
   }
+  if (self->recordset) {
+      ipmeta_record_set_free(&self->recordset);
+  }
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -55,11 +61,18 @@ IpMeta_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
   IpMetaObject *self;
 
   self = (IpMetaObject *)type->tp_alloc(type, 0);
-  if(self == NULL) {
+  if (self == NULL) {
+    return NULL;
+  }
+  self->ipm = NULL;
+  self->recordset = NULL;
+
+  if ((self->ipm = ipmeta_init(IPMETA_DS_DEFAULT)) == NULL) {
+    Py_DECREF(self);
     return NULL;
   }
 
-  if ((self->ipm = ipmeta_init(IPMETA_DS_DEFAULT)) == NULL) {
+  if ((self->recordset = ipmeta_record_set_init()) == NULL) {
     Py_DECREF(self);
     return NULL;
   }
@@ -201,29 +214,23 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
   if((list = PyList_New(0)) == NULL)
     return NULL;
 
-  ipmeta_record_set_t *set = NULL;
-  // a bit inefficient, but we create a record set just for this single use
-  if ((set = ipmeta_record_set_init()) == NULL) {
-    PyErr_SetString(PyExc_RuntimeError, "Failed to create record set");
-    goto err;
-  }
   PyObject *pyrec = NULL;
 
   if (mask == 32) {
-    if (ipmeta_lookup_single(self->ipm, addr, 0, set) < 0) {
+    if (ipmeta_lookup_single(self->ipm, addr, 0, self->recordset) < 0) {
       PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
       goto err;
     }
   } else {
-    if (ipmeta_lookup(self->ipm, addr, mask, 0, set) < 0) {
+    if (ipmeta_lookup(self->ipm, addr, mask, 0, self->recordset) < 0) {
       PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
       goto err;
     }
   }
-  ipmeta_record_set_rewind(set);
+  ipmeta_record_set_rewind(self->recordset);
   ipmeta_record_t *record = NULL;
   uint32_t num_ips = 0;
-  while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
+  while ((record = ipmeta_record_set_next(self->recordset, &num_ips)) != NULL) {
     pyrec = _pyipmeta_record_as_dict(record, num_ips);
     if(PyList_Append(list, pyrec) == -1) {
       goto err;
@@ -231,12 +238,12 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
     Py_DECREF(pyrec);
     pyrec = NULL;
   }
-  ipmeta_record_set_free(&set);
+  ipmeta_record_set_clear(self->recordset);
 
   return list;
 
  err:
-  ipmeta_record_set_free(&set);
+  ipmeta_record_set_clear(self->recordset);
   if (list != NULL) {
     Py_DECREF(list);
   }
