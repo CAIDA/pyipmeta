@@ -67,12 +67,27 @@ IpMeta_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
   self->ipm = NULL;
   self->recordset = NULL;
 
-  if ((self->ipm = ipmeta_init(IPMETA_DS_DEFAULT)) == NULL) {
+  const char *dsname = NULL;
+  static char *kwlist[] = { "datastructure", NULL };
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s", kwlist, &dsname)) {
+    return NULL;
+  }
+
+  ipmeta_ds_id_t dsid = IPMETA_DS_DEFAULT;
+  if (dsname) {
+    if ((dsid = ipmeta_ds_name_to_id(dsname)) == IPMETA_DS_NONE) {
+      PyErr_SetString(PyExc_RuntimeError, "Invalid IpMeta Datastructure name");
+      return NULL;
+    }
+  }
+  if ((self->ipm = ipmeta_init(dsid)) == NULL) {
+    PyErr_SetString(PyExc_RuntimeError, "ipmeta_init failed");
     Py_DECREF(self);
     return NULL;
   }
 
   if ((self->recordset = ipmeta_record_set_init()) == NULL) {
+    PyErr_SetString(PyExc_RuntimeError, "ipmeta_record_set_init failed");
     Py_DECREF(self);
     return NULL;
   }
