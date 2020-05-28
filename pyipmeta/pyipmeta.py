@@ -38,7 +38,7 @@ class IpMeta:
         return dateutil.parser.parse(timestr, ignoretz=True)
 
     def lookup(self, ipaddr):
-        return self.prov.lookup(ipaddr)
+        return self.ipm.lookup(ipaddr)
 
 
 def main():
