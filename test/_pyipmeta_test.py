@@ -46,7 +46,7 @@ print()
 
 # and then look up an IP address
 print("Querying Maxmind for an IP address (192.172.226.97):")
-(res,) = prov.lookup("192.172.226.97")
+(res,) = ipm.lookup("192.172.226.97")
 print(res)
 print("Result in JSON format:")
 print(json.dumps(res))
@@ -54,10 +54,16 @@ print()
 
 # and a prefix
 print("Querying Maxmind for a prefix (44.0.0.0/8):")
-results = prov.lookup("44.0.0.0/8")
+results = ipm.lookup("44.0.0.0/8")
 print(results)
 print("Results in JSON format:")
 print(json.dumps(results))
+print()
+
+# create a new ipm to test a different provider
+del ipm
+ipm = _pyipmeta.IpMeta()
+print(ipm)
 print()
 
 # take the pfx2as provider for a spin
@@ -69,7 +75,7 @@ print()
 
 # and look up an IP address
 print("Querying pfx2as for an IP address (192.172.226.97):")
-(res,) = prov.lookup("192.172.226.97")
+(res,) = ipm.lookup("192.172.226.97")
 print(res)
 print("Result in JSON format:")
 print(json.dumps(res))
@@ -77,8 +83,10 @@ print()
 
 # and a prefix
 print("Querying pfx2as for a prefix (192.172.226.0/24):")
-results = prov.lookup("192.172.226.0/24")
+results = ipm.lookup("192.172.226.0/24")
 print(results)
 print("Results in JSON format:")
 print(json.dumps(results))
 print()
+
+del ipm

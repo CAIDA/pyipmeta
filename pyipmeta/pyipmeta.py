@@ -10,9 +10,10 @@ class IpMeta:
     def __init__(self,
                  provider,
                  time=None,
-                 provider_config=None
+                 provider_config=None,
+                 **kwargs
                  ):
-        self.ipm = _pyipmeta.IpMeta()
+        self.ipm = _pyipmeta.IpMeta(**kwargs)
 
         # configure the provider
         self.prov = self.ipm.get_provider_by_name(provider)
@@ -38,7 +39,7 @@ class IpMeta:
         return dateutil.parser.parse(timestr, ignoretz=True)
 
     def lookup(self, ipaddr):
-        return self.prov.lookup(ipaddr)
+        return self.ipm.lookup(ipaddr)
 
 
 def main():

@@ -85,108 +85,10 @@ Provider_repr(PyObject *pyself)
     PYSTR_FROMSTR("<"ProviderTypeName" (id: %i, name: %s, enabled: %s)>");
 
   return
-    PYSTR_FORMAT(pystr, arg_tuple);}
-
-/* Look up an IP address or a prefix */
-static PyObject *
-Provider_lookup(ProviderObject *self, PyObject *args)
-{
-  if (ipmeta_is_provider_enabled(self->prov) == 0) {
-    PyErr_SetString(PyExc_RuntimeError,
-                    "Cannot perform lookup before provider is enabled.");
-    return NULL;
-  }
-
-  const char *pyaddrstr = NULL;
-  /* get the prefix/address argument */
-  if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
-    return NULL;
-  }
-
-  /* we need to copy the string because python is trusting that we don't mess
-     with it */
-  char *addrstr = strdup(pyaddrstr);
-  if (!addrstr) {
-    return NULL;
-  }
-
-  /* extract the mask from the prefix */
-  char *mask_str = addrstr;
-  uint8_t mask;
-  if((mask_str = strchr(addrstr, '/')) != NULL) {
-    *mask_str = '\0';
-    mask_str++;
-    mask = atoi(mask_str);
-  } else {
-    mask = 32;
-  }
-  uint32_t addr = inet_addr(addrstr);
-
-  /* create a list */
-  PyObject *list = NULL;
-  if((list = PyList_New(0)) == NULL)
-    return NULL;
-
-  ipmeta_record_t *record = NULL;
-  ipmeta_record_set_t *set = NULL;
-  PyObject *pyrec = NULL;
-
-  if (mask == 32) {
-    if ((record = ipmeta_lookup_single(self->prov, addr)) == NULL) {
-      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
-      goto err;
-    }
-    pyrec = _pyipmeta_record_as_dict(record, 1);
-    if(PyList_Append(list, pyrec) == -1) {
-      goto err;
-    }
-    Py_DECREF(pyrec);
-    pyrec = NULL;
-  } else {
-    // a bit inefficient, but we create a record set just for this single use
-    if ((set = ipmeta_record_set_init()) == NULL) {
-      PyErr_SetString(PyExc_RuntimeError, "Failed to create record set");
-      goto err;
-    }
-    if (ipmeta_lookup(self->prov, addr, mask, set) < 0) {
-      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
-      goto err;
-    }
-    ipmeta_record_set_rewind(set);
-    uint32_t num_ips = 0;
-    while ((record = ipmeta_record_set_next(set, &num_ips)) != NULL) {
-      pyrec = _pyipmeta_record_as_dict(record, num_ips);
-      if(PyList_Append(list, pyrec) == -1) {
-        goto err;
-      }
-      Py_DECREF(pyrec);
-      pyrec = NULL;
-    }
-    ipmeta_record_set_free(&set);
-  }
-
-  return list;
-
- err:
-  ipmeta_record_set_free(&set);
-  if (list != NULL) {
-    Py_DECREF(list);
-  }
-  if (pyrec != NULL) {
-    Py_DECREF(pyrec);
-  }
-  return NULL;
+    PYSTR_FORMAT(pystr, arg_tuple);
 }
 
 static PyMethodDef Provider_methods[] = {
-
-  {
-    "lookup",
-    (PyCFunction)Provider_lookup,
-    METH_VARARGS,
-    "Look up metadata for an IP address or prefix"
-  },
-
   {NULL}  /* Sentinel */
 };
 
