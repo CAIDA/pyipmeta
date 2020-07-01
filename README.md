@@ -4,7 +4,7 @@ GeoIP and/or NetAcuity (Digital Element) geolocation databases.
 
 ## Pre-requisites
 Before installing PyIPMeta, you will need:
-  - [libipmeta](https://github.com/CAIDA/libipmeta)
+  - [libipmeta (= 2.2.0)](https://github.com/CAIDA/libipmeta/releases/tag/v2.2.0)
   - Python setuptools (`sudo apt install python-setuptools` on Ubuntu)
   - Python development headers (`sudo apt install python-dev` on Ubuntu)
 
