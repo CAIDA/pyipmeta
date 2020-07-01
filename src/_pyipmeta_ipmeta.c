@@ -205,25 +205,6 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
     return NULL;
   }
 
-  /* we need to copy the string because python is trusting that we don't mess
-     with it */
-  char *addrstr = strdup(pyaddrstr);
-  if (!addrstr) {
-    return NULL;
-  }
-
-  /* extract the mask from the prefix */
-  char *mask_str = addrstr;
-  uint8_t mask;
-  if((mask_str = strchr(addrstr, '/')) != NULL) {
-    *mask_str = '\0';
-    mask_str++;
-    mask = atoi(mask_str);
-  } else {
-    mask = 32;
-  }
-  uint32_t addr = inet_addr(addrstr);
-
   /* create a list */
   PyObject *list = NULL;
   if((list = PyList_New(0)) == NULL)
@@ -231,20 +212,13 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
 
   PyObject *pyrec = NULL;
 
-  if (mask == 32) {
-    if (ipmeta_lookup_single(self->ipm, addr, 0, self->recordset) < 0) {
-      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup IP address");
-      goto err;
-    }
-  } else {
-    if (ipmeta_lookup(self->ipm, addr, mask, 0, self->recordset) < 0) {
-      PyErr_SetString(PyExc_RuntimeError, "Failed to lookup prefix");
-      goto err;
-    }
+  if (ipmeta_lookup(self->ipm, pyaddrstr, 0, self->recordset) < 0) {
+    PyErr_SetString(PyExc_RuntimeError, "Failed to lookup address or prefix");
+    goto err;
   }
   ipmeta_record_set_rewind(self->recordset);
   ipmeta_record_t *record = NULL;
-  uint32_t num_ips = 0;
+  uint64_t num_ips = 0;
   while ((record = ipmeta_record_set_next(self->recordset, &num_ips)) != NULL) {
     pyrec = _pyipmeta_record_as_dict(record, num_ips);
     if(PyList_Append(list, pyrec) == -1) {
