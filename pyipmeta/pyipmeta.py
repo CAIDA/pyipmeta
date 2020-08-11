@@ -8,29 +8,45 @@ import _pyipmeta
 class IpMeta:
 
     def __init__(self,
-                 provider,
+                 providers=None,
                  time=None,
-                 provider_config=None,
                  **kwargs
                  ):
         self.ipm = _pyipmeta.IpMeta(**kwargs)
+        self.prov = list()
 
-        # configure the provider
-        self.prov = self.ipm.get_provider_by_name(provider)
-        if not self.prov:
-            raise ValueError("Invalid provider specified: '%s'" % provider)
+        parsed_time = self._parse_timestr(time)
 
-        if provider_config is None:
-            # use our helper to try and figure out the provider config
-            idx = dbidx.DbIdx(provider)
-            parsed_time = self._parse_timestr(time)
-            provider_config = idx.best_db(parsed_time, build_cmd=True)
-        elif time is not None:
-            # doesn't make sense to specify both provider_config AND time
-            raise ValueError("Only one of 'time' and 'provider_config' may be specified")
+        if providers is None:
+            # use all providers known by our helper
+            prov_dict = dbidx.DbIdx.all_providers()
 
-        if not self.ipm.enable_provider(self.prov, provider_config):
-            raise RuntimeError("Could not enable provider (check stderr)")
+        else:
+            prov_dict = dict()
+            for arg in providers:
+                args = arg.strip().split(None, 1)
+                if len(args) == 2:
+                    # "<name> <config>"
+                    if time is not None:
+                        raise ValueError("Only one of 'time' and 'provider_config' may be specified")
+                    prov_dict[args[0]] = args[1]
+                else:
+                    # "<name>"
+                    # use our helper to try and figure out the provider config
+                    try:
+                        idx = dbidx.DbIdx(args[0])
+                    except KeyError as e:
+                        raise ValueError("Invalid provider specified: '%s'" % args[0]) from None
+                    prov_dict[args[0]] = idx.best_db(parsed_time, build_cmd=True)
+
+        for prov_name, prov_config in prov_dict.items():
+            # configure the provider
+            prov = self.ipm.get_provider_by_name(prov_name)
+            if not prov:
+                raise ValueError("Invalid provider specified: '%s'" % prov_name)
+            if not self.ipm.enable_provider(prov, prov_config):
+                raise RuntimeError("Could not enable provider (check stderr)")
+            self.prov.append(prov)
 
     @staticmethod
     def _parse_timestr(timestr):
@@ -47,26 +63,21 @@ def main():
     Historical IP/Prefix Metadata tagging tool. Supports Maxmind and Net Acuity Edge
     """)
     parser.add_argument('-p', '--provider',
-                        nargs='?', required=False,
-                        help="Metadata provider to use ('netacq-edge' or 'maxmind')",
-                        choices=["maxmind", "netacq-edge"],
-                        default="netacq-edge")
+                        required=False, action='append',
+                        help="Metadata provider to use ('netacq-edge' or 'maxmind') and its configuration (repeatable)"
+                        )
     parser.add_argument('-d', '--date',
-                        nargs='?', required=False,
+                        required=False,
                         help="Date to use for automatic DB selection (default: latest DB)")
-    parser.add_argument('-c', '--provider-config',
-                        nargs='?', required=False,
-                        help="Explicit libipmeta config string to pass to specified provider")
 
     gp = parser.add_mutually_exclusive_group(required=True)
-    gp.add_argument('addrs', nargs='*', help='IP Addresses or prefixes to look up', default=[])
-    gp.add_argument('-f', '--file', nargs='?',
-                    help="File with list of IPs/prefixes to look up")
+    gp.add_argument('prefix', nargs='*', help='IP address or prefix to look up', default=[])
+    gp.add_argument('-f', '--file',
+                    help="File with list of addresses/prefixes to look up")
 
     opts = vars(parser.parse_args())
 
-    ipm = IpMeta(provider=opts["provider"], time=opts["date"],
-                 provider_config=opts["provider_config"])
+    ipm = IpMeta(providers=opts["provider"], time=opts["date"])
 
     if opts["file"] is not None:
         with open(opts["file"], "r") as fh:
