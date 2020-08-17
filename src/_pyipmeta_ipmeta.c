@@ -200,8 +200,9 @@ static PyObject *
 IpMeta_lookup(IpMetaObject *self, PyObject *args)
 {
   const char *pyaddrstr = NULL;
+  int provmask = 0;
   /* get the prefix/address argument */
-  if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
+  if (!PyArg_ParseTuple(args, "s|i", &pyaddrstr, &provmask)) {
     return NULL;
   }
 
@@ -212,7 +213,7 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
 
   PyObject *pyrec = NULL;
 
-  if (ipmeta_lookup(self->ipm, pyaddrstr, 0, self->recordset) < 0) {
+  if (ipmeta_lookup(self->ipm, pyaddrstr, provmask, self->recordset) < 0) {
     PyErr_SetString(PyExc_RuntimeError, "Failed to lookup address or prefix");
     goto err;
   }

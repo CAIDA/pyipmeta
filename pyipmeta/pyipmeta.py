@@ -54,8 +54,20 @@ class IpMeta:
             return None
         return dateutil.parser.parse(timestr, ignoretz=True)
 
-    def lookup(self, ipaddr):
-        return self.ipm.lookup(ipaddr)
+    def provmask(self, names, must_be_enabled=False):
+        """Convert list of provider names to a provider mask."""
+        mask = 0
+        for name in names:
+            prov = self.ipm.get_provider_by_name(name)
+            if prov is None:
+                raise ValueError("Invalid provider '%s'" % name)
+            if must_be_enabled and not prov.enabled:
+                raise ValueError("Provider '%s' is not enabled" % name)
+            mask = mask | (1 << (prov.id - 1))
+        return mask
+
+    def lookup(self, ipaddr, provmask=0):
+        return self.ipm.lookup(ipaddr, provmask)
 
 
 def main():
