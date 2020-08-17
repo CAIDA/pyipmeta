@@ -63,17 +63,15 @@ def main():
     Historical IP/Prefix Metadata tagging tool. Supports Maxmind and Net Acuity Edge
     """)
     parser.add_argument('-p', '--provider',
-                        required=False, action='append',
-                        help="Metadata provider to use ('netacq-edge' or 'maxmind') and its configuration (repeatable)"
-                        )
+        required=False, action='append',
+        help="Metadata provider to use ('netacq-edge' or 'maxmind') and its configuration (repeatable)")
     parser.add_argument('-d', '--date',
-                        required=False,
-                        help="Date to use for automatic DB selection (default: latest DB)")
+        required=False,
+        help="Date to use for automatic DB selection (default: latest DB)")
 
-    gp = parser.add_mutually_exclusive_group(required=True)
-    gp.add_argument('prefix', nargs='*', help='IP address or prefix to look up', default=[])
-    gp.add_argument('-f', '--file',
-                    help="File with list of addresses/prefixes to look up")
+    parser.add_argument('prefix', nargs='*', help='IP address or prefix to look up', default=[])
+    parser.add_argument('-f', '--file',
+        help="File with list of addresses/prefixes to look up")
 
     opts = vars(parser.parse_args())
 
@@ -85,8 +83,8 @@ def main():
                 line = line.strip()
                 do_lookup(ipm, line)
 
-    for addr in opts["addrs"]:
-        do_lookup(ipm, addr)
+    for prefix in opts["prefix"]:
+        do_lookup(ipm, prefix)
 
 
 def do_lookup(ipm, addr):
