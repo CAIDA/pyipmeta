@@ -84,8 +84,9 @@ class DbIdx:
             self.dbs[date][table] = "%s/%s" % (self.prov_cfg["file_pfx"], filename)
             self.latest_time = date if self.latest_time is None else max(self.latest_time, date)
 
-    def all_providers(self):
-        return DbIdx.cfgs
+    @staticmethod
+    def all_providers():
+        return DbIdx.cfgs.keys()
 
     def best_db(self, time=None, build_cmd=False):
         if time is None:

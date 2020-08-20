@@ -19,25 +19,24 @@ class IpMeta:
 
         if providers is None:
             # use all providers known by our helper
-            prov_dict = dbidx.DbIdx.all_providers()
+            providers = dbidx.DbIdx.all_providers()
 
-        else:
-            prov_dict = dict()
-            for arg in providers:
-                args = arg.strip().split(None, 1)
-                if len(args) == 2:
-                    # "<name> <config>"
-                    if time is not None:
-                        raise ValueError("Only one of 'time' and 'provider_config' may be specified")
-                    prov_dict[args[0]] = args[1]
-                else:
-                    # "<name>"
-                    # use our helper to try and figure out the provider config
-                    try:
-                        idx = dbidx.DbIdx(args[0])
-                    except KeyError as e:
-                        raise ValueError("Invalid provider specified: '%s'" % args[0]) from None
-                    prov_dict[args[0]] = idx.best_db(parsed_time, build_cmd=True)
+        prov_dict = dict()
+        for arg in providers:
+            args = arg.strip().split(None, 1)
+            if len(args) == 2:
+                # "<name> <config>"
+                if time is not None:
+                    raise ValueError("Only one of 'time' and 'provider_config' may be specified")
+                prov_dict[args[0]] = args[1]
+            else:
+                # "<name>"
+                # use our helper to try and figure out the provider config
+                try:
+                    idx = dbidx.DbIdx(args[0])
+                except KeyError as e:
+                    raise ValueError("Invalid provider specified: '%s'" % args[0]) from None
+                prov_dict[args[0]] = idx.best_db(parsed_time, build_cmd=True)
 
         for prov_name, prov_config in prov_dict.items():
             # configure the provider
