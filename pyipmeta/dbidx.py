@@ -1,13 +1,9 @@
+import os
 import datetime
 import re
 import sys
 import subprocess
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen
+from swiftclient.service import SwiftService, SwiftError
 
 # TODO: allow customization of built commands (e.g., no polygon table?)
 # TODO: allow use of special "latest" db
@@ -42,20 +38,15 @@ def build_maxmind_cmd(dbs):
     return "-b %s -l %s" % (dbs["blocks"], dbs["location"])
 
 class DbIdx:
-
-    server = "http://loki.caida.org:3282"
-
     cfgs = {
         "netacq-edge": {
-            "file_pfx": server + "/netacuity-dumps/Edge-processed",
-            "filelist": "md5.md5",
+            "container": "datasets-external-netacuity-edge-processed",
             "name_parser": parse_netacq_filename,
             "cmd_builder": build_netacq_cmd,
             "tables_required": ["blocks", "locations", "polygons"],
         },
         "maxmind": {
-            "file_pfx": server + "/maxmind-geolite-dumps/city-v4",
-            "filelist": "md5.md5",
+            "container": "datasets-external-maxmind-city-v4",
             "name_parser": parse_maxmind_filename,
             "cmd_builder": build_maxmind_cmd,
             "tables_required": ["blocks", "location"],
@@ -72,17 +63,30 @@ class DbIdx:
         return DbIdx.cfgs[provider]
 
     def _load_dbs(self):
-        for line in urlopen("%s/%s" % (self.prov_cfg["file_pfx"],
-                                               self.prov_cfg["filelist"])):
-            line = line.decode('utf-8')
-            (filename, chksum) = line.strip().split(" ")
-            (date, table, filename) = self.prov_cfg["name_parser"](filename)
-            if not date:
-                continue
-            if date not in self.dbs:
-                self.dbs[date] = {}
-            self.dbs[date][table] = "%s/%s" % (self.prov_cfg["file_pfx"], filename)
-            self.latest_time = date if self.latest_time is None else max(self.latest_time, date)
+        swift_opts = {
+            # Apparently SwiftService by default checks only ST_AUTH_VERSION.
+            # We emulate the swift CLI, and check three different variables.
+            "auth_version": os.environ.get('ST_AUTH_VERSION',
+                os.environ.get('OS_AUTH_VERSION',
+                os.environ.get('OS_IDENTITY_API_VERSION', '1.0'))),
+            }
+        with SwiftService(options=swift_opts) as swift:
+            try:
+                list_parts_gen = swift.list(container=self.prov_cfg["container"])
+                for page in list_parts_gen:
+                    if not page["success"]:
+                        raise page["error"]
+                    for item in page["listing"]:
+                        (date, table, filename) = \
+                            self.prov_cfg["name_parser"](item["name"])
+                        if not date:
+                            continue
+                        self.dbs.setdefault(date, {})[table] = \
+                            "swift://%s/%s" % (self.prov_cfg["container"], filename)
+                        if self.latest_time is None or date > self.latest_time:
+                            self.latest_time = date
+            except SwiftError as e:
+                logger.error(e.value)
 
     @staticmethod
     def all_providers():
