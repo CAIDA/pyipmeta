@@ -10,44 +10,32 @@ from swiftclient.service import SwiftService, SwiftError
 # TODO: add support for pfx2as
 
 
-def parse_netacq_filename(filename):
-    # 2017-03-16.netacq-4-polygons.csv.gz
-    match = re.match(r"(\d+-\d+-\d+)\.netacq-4-(.+)\.csv\.gz", filename)
+def _parse_filename(filename, pattern):
+    match = re.match(pattern, filename)
     if not match:
         return None, None, filename
-    date_str = match.group(1)
+    date_str = match.group('date')
     date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-    table = match.group(2)
+    table = match.group('table').lower()
     return date, table, filename
 
-def build_netacq_cmd(dbs):
-    return "-b %s -l %s" % (dbs["blocks"], dbs["locations"])
-
-def parse_maxmind_filename(filename):
-    # 2015-02-16.GeoLiteCity-Blocks.csv.gz
-    match = re.match(r"(\d+-\d+-\d+)\.GeoLiteCity-(.+)\.csv\.gz", filename)
-    if not match:
-        return None, None, filename
-    date_str = match.group(1)
-    date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-    table = match.group(2).lower()
-    return date, table, filename
-
-def build_maxmind_cmd(dbs):
-    return "-b %s -l %s" % (dbs["blocks"], dbs["location"])
+def _build_cmd(dbs, template):
+    return template[0] % tuple(dbs[table] for table in template[1:])
 
 class DbIdx:
     cfgs = {
         "netacq-edge": {
-            "container": "datasets-external-netacuity-edge-processed",
-            "name_parser": parse_netacq_filename,
-            "cmd_builder": build_netacq_cmd,
-            "tables_required": ["blocks", "locations", "polygons"],
+            "container": "datasets-external-netacq-edge-processed",
+            # e.g., 2017-03-16.netacq-4-polygons.csv.gz
+            "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
+            "cmd": [ "-b %s -l %s", "blocks", "locations"],
+            "tables_required": ["blocks", "locations"],
         },
         "maxmind": {
             "container": "datasets-external-maxmind-city-v4",
-            "name_parser": parse_maxmind_filename,
-            "cmd_builder": build_maxmind_cmd,
+            # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
+            "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
+            "cmd": [ "-b %s -l %s", "blocks", "location"],
             "tables_required": ["blocks", "location"],
         },
     }
@@ -76,10 +64,11 @@ class DbIdx:
                     if not page["success"]:
                         raise page["error"]
                     for item in page["listing"]:
-                        (date, table, filename) = \
-                            self.prov_cfg["name_parser"](item["name"])
+                        (date, table, filename) = _parse_filename(item["name"],
+                                self.prov_cfg["pattern"])
                         if not date:
                             continue
+                        # format the name as expected by libipmeta/wandio
                         self.dbs.setdefault(date, {})[table] = \
                             "swift://%s/%s" % (self.prov_cfg["container"], filename)
                         if self.latest_time is None or date > self.latest_time:
@@ -111,5 +100,5 @@ class DbIdx:
                     best_time = t
             dbs = self.dbs[best_time]
 
-        return dbs if not build_cmd else self.prov_cfg["cmd_builder"](dbs)
+        return dbs if not build_cmd else _build_cmd(dbs, self.prov_cfg["cmd"])
 
