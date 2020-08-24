@@ -29,14 +29,12 @@ class DbIdx:
             # e.g., 2017-03-16.netacq-4-polygons.csv.gz
             "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
             "cmd": [ "-b %s -l %s", "blocks", "locations"],
-            "tables_required": ["blocks", "locations"],
         },
         "maxmind": {
             "container": "datasets-external-maxmind-city-v4",
             # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
             "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
             "cmd": [ "-b %s -l %s", "blocks", "location"],
-            "tables_required": ["blocks", "location"],
         },
     }
 
@@ -89,7 +87,7 @@ class DbIdx:
             for t in self.dbs:
                 # are all the required files available?
                 ok = True
-                for tbl in self.prov_cfg["tables_required"]:
+                for tbl in self.prov_cfg["cmd"][1:]:
                     if tbl not in self.dbs[t]:
                         ok = False
                         break
