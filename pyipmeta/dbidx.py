@@ -6,7 +6,6 @@ import subprocess
 from swiftclient.service import SwiftService, SwiftError
 
 # TODO: allow customization of built commands (e.g., no polygon table?)
-# TODO: allow use of special "latest" db
 # TODO: switch to using swift
 # TODO: add support for pfx2as
 
@@ -114,5 +113,3 @@ class DbIdx:
 
         return dbs if not build_cmd else self.prov_cfg["cmd_builder"](dbs)
 
-    def latest_db(self, build_cmd=False):
-        return self.best_db(build_cmd=build_cmd)
