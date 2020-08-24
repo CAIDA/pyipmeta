@@ -5,8 +5,6 @@ import sys
 import subprocess
 from swiftclient.service import SwiftService, SwiftError
 
-# TODO: add support for maxmind v2
-
 
 def _parse_filename(filename, pattern):
     match = re.match(pattern, filename)
@@ -22,24 +20,50 @@ def _build_cmd(dbs, template):
 
 class DbIdx:
     cfgs = {
-        "netacq-edge": {
-            "container": "datasets-external-netacq-edge-processed",
-            # e.g., 2017-03-16.netacq-4-polygons.csv.gz
-            "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
-            "cmd": ["-b %s -l %s", "blocks", "locations"],
-        },
-        "maxmind": {
-            "container": "datasets-external-maxmind-city-v4",
-            # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
-            "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
-            "cmd": ["-b %s -l %s", "blocks", "location"],
-        },
-        "pfx2as": {
-            "container": "datasets-routing-routeviews-prefix2as",
-            # e.g., 2020/08/routeviews-rv2-20200823-2200.pfx2as.gz
-            "pattern": r"\d+/\d+/routeviews-rv2-(?P<date>\d{8})-\d+\.(?P<table>pfx2as)\.gz",
-            "cmd": ["-f %s", "pfx2as"],
-        },
+#        # configuration format
+#        <provider-name>: [
+#            {
+#                "container": <name-of-swift-container>,
+#                "pattern": regexp to match object (file) name; must contain
+#                    "(?P<date>...)" and "(?P<table>...)"
+#                "cmd": [
+#                    first item is ipmeta provider configuration command
+#                    format; remaining items are names of tables.  The object
+#                    names corresponding to the tables for a selected date
+#                    will be subbed into format.
+#                ]
+#            },
+#        ],
+        "netacq-edge": [
+            {
+                "container": "datasets-external-netacq-edge-processed",
+                # e.g., 2017-03-16.netacq-4-polygons.csv.gz
+                "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
+                "cmd": ["-b %s -l %s", "blocks", "locations"],
+            },
+        ],
+        "maxmind": [
+            {   # maxmind v1
+                "container": "datasets-external-maxmind-city-v4",
+                # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
+                "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
+                "cmd": ["-b %s -l %s", "blocks", "location"],
+            },
+#           {   # maxmind v2 (note: It's ok to enable both v1 and v2.)
+#               "container": "datasets-external-maxmind-city2",
+#               # e.g., 2020-08-19.GeoLite2-City-Blocks.csv.gz
+#               "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLite2-City-(?P<table>.+)\.csv\.gz",
+#               "cmd": ["-b %s -l %s", "blocks", "location"],
+#           },
+        ],
+        "pfx2as": [
+            {
+                "container": "datasets-routing-routeviews-prefix2as",
+                # e.g., 2020/08/routeviews-rv2-20200823-2200.pfx2as.gz
+                "pattern": r"\d+/\d+/routeviews-rv2-(?P<date>\d{8})-\d+\.(?P<table>pfx2as)\.gz",
+                "cmd": ["-f %s", "pfx2as"],
+            },
+        ],
     }
 
     def __init__(self, provider):
@@ -60,23 +84,25 @@ class DbIdx:
                 os.environ.get('OS_IDENTITY_API_VERSION', '1.0'))),
             }
         with SwiftService(options=swift_opts) as swift:
-            try:
-                list_parts_gen = swift.list(container=self.prov_cfg["container"])
-                for page in list_parts_gen:
-                    if not page["success"]:
-                        raise page["error"]
-                    for item in page["listing"]:
-                        (date, table, filename) = _parse_filename(item["name"],
-                                self.prov_cfg["pattern"])
-                        if not date:
-                            continue
-                        # format the name as expected by libipmeta/wandio
-                        self.dbs.setdefault(date, {})[table] = \
-                            "swift://%s/%s" % (self.prov_cfg["container"], filename)
-                        if self.latest_time is None or date > self.latest_time:
-                            self.latest_time = date
-            except SwiftError as e:
-                logger.error(e.value)
+            for cfg in self.prov_cfg:
+                try:
+                    list_parts_gen = swift.list(container=cfg["container"])
+                    for page in list_parts_gen:
+                        if not page["success"]:
+                            raise page["error"]
+                        for item in page["listing"]:
+                            (date, table, filename) = _parse_filename(item["name"],
+                                    cfg["pattern"])
+                            if not date:
+                                continue
+                            self.dbs.setdefault(date, {})["_cfg"] = cfg
+                            # format the name as expected by libipmeta/wandio
+                            self.dbs[date][table] = \
+                                "swift://%s/%s" % (cfg["container"], filename)
+                            if self.latest_time is None or date > self.latest_time:
+                                self.latest_time = date
+                except SwiftError as e:
+                    logger.error(e.value)
 
     @staticmethod
     def all_providers():
@@ -90,17 +116,13 @@ class DbIdx:
             best_time = None
             for t in self.dbs:
                 # are all the required files available?
-                ok = True
-                for tbl in self.prov_cfg["cmd"][1:]:
-                    if tbl not in self.dbs[t]:
-                        ok = False
-                        break
-                if not ok:
+                cfg = self.dbs[t]["_cfg"]
+                if not all([tbl in self.dbs[t] for tbl in cfg["cmd"][1:]]):
                     continue
                 # is this the best time we've seen so far?
                 if t < time and (not best_time or best_time < t):
                     best_time = t
             dbs = self.dbs[best_time]
 
-        return dbs if not build_cmd else _build_cmd(dbs, self.prov_cfg["cmd"])
+        return dbs if not build_cmd else _build_cmd(dbs, dbs["_cfg"]["cmd"])
 
