@@ -1,13 +1,11 @@
 import os
-import datetime
+import dateutil
 import re
 import sys
 import subprocess
 from swiftclient.service import SwiftService, SwiftError
 
-# TODO: allow customization of built commands (e.g., no polygon table?)
-# TODO: switch to using swift
-# TODO: add support for pfx2as
+# TODO: add support for maxmind v2
 
 
 def _parse_filename(filename, pattern):
@@ -15,7 +13,7 @@ def _parse_filename(filename, pattern):
     if not match:
         return None, None, filename
     date_str = match.group('date')
-    date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    date = dateutil.parser.parse(date_str)
     table = match.group('table').lower()
     return date, table, filename
 
@@ -28,13 +26,19 @@ class DbIdx:
             "container": "datasets-external-netacq-edge-processed",
             # e.g., 2017-03-16.netacq-4-polygons.csv.gz
             "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
-            "cmd": [ "-b %s -l %s", "blocks", "locations"],
+            "cmd": ["-b %s -l %s", "blocks", "locations"],
         },
         "maxmind": {
             "container": "datasets-external-maxmind-city-v4",
             # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
             "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
-            "cmd": [ "-b %s -l %s", "blocks", "location"],
+            "cmd": ["-b %s -l %s", "blocks", "location"],
+        },
+        "pfx2as": {
+            "container": "datasets-routing-routeviews-prefix2as",
+            # e.g., 2020/08/routeviews-rv2-20200823-2200.pfx2as.gz
+            "pattern": r"\d+/\d+/routeviews-rv2-(?P<date>\d{8})-\d+\.(?P<table>pfx2as)\.gz",
+            "cmd": ["-f %s", "pfx2as"],
         },
     }
 
