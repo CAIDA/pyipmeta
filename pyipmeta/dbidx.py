@@ -10,19 +10,19 @@ def _parse_filename(filename, pattern):
     match = re.match(pattern, filename)
     if not match:
         return None, None, filename
-    date_str = match.group('date')
-    date = dateutil.parser.parse(date_str)
+    date = dateutil.parser.parse(match.group('date'))
     table = match.group('table').lower()
     return date, table, filename
 
-def _build_cmd(dbs, cmd):
-    return " ".join([subcmd[0] % dbs[subcmd[1]]
-        for subcmd in cmd if subcmd[1] in dbs])
+def _build_cmd(db, cmd):
+    return " ".join([subcmd[0] % db[subcmd[1]]
+        for subcmd in cmd if subcmd[1] in db])
 
 class DbIdx:
     cfgs = {
 #        # configuration format
 #        <provider-name>: [
+#            One or more container descriptions:
 #            {
 #                "container": <name-of-swift-container>,
 #                "pattern": regexp to match object (file) name; must contain
@@ -42,7 +42,7 @@ class DbIdx:
         "netacq-edge": [
             {
                 "container": "datasets-external-netacq-edge-processed",
-                # e.g., 2017-03-16.netacq-4-polygons.csv.gz
+                # e.g., 2017-03-16.netacq-4-blocks.csv.gz
                 "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
                 "cmd": [
                     ("-l %s", "locations", True),
@@ -88,12 +88,12 @@ class DbIdx:
         self.latest_time = None
         self.dbs = {}    # time -> table name -> file name
         self.dbcfgs = {} # time -> db config info
-        self._load_dbs()
+        self._load_index()
 
     def _load_provider_config(self, provider):
         return DbIdx.cfgs[provider]
 
-    def _load_dbs(self):
+    def _load_index(self):
         swift_opts = {
             # Apparently SwiftService by default checks only ST_AUTH_VERSION.
             # We emulate the swift CLI, and check three different variables.
@@ -141,6 +141,6 @@ class DbIdx:
                 best_time = t
         if not best_time:
             raise RuntimeError("No complete datasets for %s" % (self.prov_name))
-        best_dbs = self.dbs[best_time]
+        best_db = self.dbs[best_time]
         cfg = self.dbcfgs[best_time]
-        return best_dbs if not build_cmd else _build_cmd(best_dbs, cfg["cmd"])
+        return best_db if not build_cmd else _build_cmd(best_db, cfg["cmd"])
