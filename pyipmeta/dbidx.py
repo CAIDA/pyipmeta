@@ -15,8 +15,9 @@ def _parse_filename(filename, pattern):
     table = match.group('table').lower()
     return date, table, filename
 
-def _build_cmd(dbs, template):
-    return template[0] % tuple(dbs[table] for table in template[1:])
+def _build_cmd(dbs, cmd):
+    return " ".join([subcmd[0] % dbs[subcmd[1]]
+        for subcmd in cmd if subcmd[1] in dbs])
 
 class DbIdx:
     cfgs = {
@@ -27,11 +28,15 @@ class DbIdx:
 #                "pattern": regexp to match object (file) name; must contain
 #                    "(?P<date>...)" and "(?P<table>...)"
 #                "cmd": [
-#                    first item is ipmeta provider configuration command
-#                    format; remaining items are names of tables.  The object
-#                    names corresponding to the tables for a selected date
-#                    will be subbed into format.
-#                ]
+#                    list of (fmt, tablename, required) tuples.
+#                    For each tuple, if the object corresponding to tablename
+#                    exists for the given date, it is subbed into the fmt
+#                    string.  All the generated strings are concatenated to
+#                    form an ipmeta provider command string.  If the object
+#                    does not exist for the given date, and required=False,
+#                    the table is skipped; if required=True, the entire date
+#                    is skipped.
+#                ],
 #            },
 #        ],
         "netacq-edge": [
@@ -39,7 +44,11 @@ class DbIdx:
                 "container": "datasets-external-netacq-edge-processed",
                 # e.g., 2017-03-16.netacq-4-polygons.csv.gz
                 "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
-                "cmd": ["-b %s -l %s", "blocks", "locations"],
+                "cmd": [
+                    ("-l %s", "locations", True),
+                    ("-b %s", "blocks",    True),
+                    ("-6 %s", "ipv6",      False),
+                ],
             },
         ],
         "maxmind": [
@@ -47,13 +56,20 @@ class DbIdx:
                 "container": "datasets-external-maxmind-city-v4",
                 # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
                 "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
-                "cmd": ["-b %s -l %s", "blocks", "location"],
+                "cmd": [
+                    ("-b %s", "blocks",   True),
+                    ("-l %s", "location", True),
+                ],
             },
 #           {   # maxmind v2 (note: It's ok to enable both v1 and v2.)
 #               "container": "datasets-external-maxmind-city2",
-#               # e.g., 2020-08-19.GeoLite2-City-Blocks.csv.gz
+#               # e.g., 2020-08-19.GeoLite2-City-Blocks-IPv6.csv.gz
 #               "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLite2-City-(?P<table>.+)\.csv\.gz",
-#               "cmd": ["-b %s -l %s", "blocks", "location"],
+#               "cmd": [
+#                   ("-b %s", "blocks-ipv4",  True),
+#                   ("-b %s", "blocks-ipv6",  True),
+#                   ("-l %s", "locations-en", True),
+#               ],
 #           },
         ],
         "pfx2as": [
@@ -61,7 +77,7 @@ class DbIdx:
                 "container": "datasets-routing-routeviews-prefix2as",
                 # e.g., 2020/08/routeviews-rv2-20200823-2200.pfx2as.gz
                 "pattern": r"\d+/\d+/routeviews-rv2-(?P<date>\d{8})-\d+\.(?P<table>pfx2as)\.gz",
-                "cmd": ["-f %s", "pfx2as"],
+                "cmd": [("-f %s", "pfx2as", True)],
             },
         ],
     }
@@ -70,7 +86,8 @@ class DbIdx:
         self.prov_name = provider
         self.prov_cfg = self._load_provider_config(provider)
         self.latest_time = None
-        self.dbs = {}
+        self.dbs = {}    # time -> table name -> file name
+        self.dbcfgs = {} # time -> db config info
         self._load_dbs()
 
     def _load_provider_config(self, provider):
@@ -96,9 +113,9 @@ class DbIdx:
                                     cfg["pattern"])
                             if not date:
                                 continue
-                            self.dbs.setdefault(date, {})["_cfg"] = cfg
+                            self.dbcfgs[date] = cfg
                             # format the name as expected by libipmeta/wandio
-                            self.dbs[date][table] = \
+                            self.dbs.setdefault(date, {})[table] = \
                                 "swift://%s/%s" % (cfg["container"], filename)
                             if self.latest_time is None or date > self.latest_time:
                                 self.latest_time = date
@@ -116,15 +133,14 @@ class DbIdx:
         best_time = None
         for t in self.dbs:
             # are all the required files available?
-            cfg = self.dbs[t]["_cfg"]
-            if not all([tbl in self.dbs[t] for tbl in cfg["cmd"][1:]]):
+            cfg = self.dbcfgs[t]
+            if not all([subcmd[1] in self.dbs[t] for subcmd in cfg["cmd"] if subcmd[2]]):
                 continue
             # is this the best time we've seen so far?
             if t <= time and (not best_time or best_time < t):
                 best_time = t
         if not best_time:
             raise RuntimeError("No complete datasets for %s" % (self.prov_name))
-        dbs = self.dbs[best_time]
-
-        return dbs if not build_cmd else _build_cmd(dbs, dbs["_cfg"]["cmd"])
-
+        best_dbs = self.dbs[best_time]
+        cfg = self.dbcfgs[best_time]
+        return best_dbs if not build_cmd else _build_cmd(best_dbs, cfg["cmd"])
