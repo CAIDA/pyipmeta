@@ -67,6 +67,7 @@ class DbIdx:
     }
 
     def __init__(self, provider):
+        self.prov_name = provider
         self.prov_cfg = self._load_provider_config(provider)
         self.latest_time = None
         self.dbs = {}
@@ -102,7 +103,8 @@ class DbIdx:
                             if self.latest_time is None or date > self.latest_time:
                                 self.latest_time = date
                 except SwiftError as e:
-                    logger.error(e.value)
+                    # logger.error(e.value)
+                    raise e
 
     @staticmethod
     def all_providers():
@@ -111,18 +113,18 @@ class DbIdx:
     def best_db(self, time=None, build_cmd=False):
         if time is None:
             time = self.latest_time
-            dbs = self.dbs[time]
-        else:
-            best_time = None
-            for t in self.dbs:
-                # are all the required files available?
-                cfg = self.dbs[t]["_cfg"]
-                if not all([tbl in self.dbs[t] for tbl in cfg["cmd"][1:]]):
-                    continue
-                # is this the best time we've seen so far?
-                if t < time and (not best_time or best_time < t):
-                    best_time = t
-            dbs = self.dbs[best_time]
+        best_time = None
+        for t in self.dbs:
+            # are all the required files available?
+            cfg = self.dbs[t]["_cfg"]
+            if not all([tbl in self.dbs[t] for tbl in cfg["cmd"][1:]]):
+                continue
+            # is this the best time we've seen so far?
+            if t <= time and (not best_time or best_time < t):
+                best_time = t
+        if not best_time:
+            raise RuntimeError("No complete datasets for %s" % (self.prov_name))
+        dbs = self.dbs[best_time]
 
         return dbs if not build_cmd else _build_cmd(dbs, dbs["_cfg"]["cmd"])
 
