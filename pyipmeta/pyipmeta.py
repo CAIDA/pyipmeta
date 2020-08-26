@@ -34,10 +34,7 @@ class IpMeta:
             else:
                 # "<name>"
                 # use our helper to try and figure out the provider config
-                try:
-                    idx = dbidx.DbIdx(args[0])
-                except KeyError as e:
-                    raise ValueError("Invalid provider specified: '%s'" % args[0]) from None
+                idx = dbidx.DbIdx(args[0])
                 prov_dict[args[0]] = idx.best_db(parsed_time, build_cmd=True)
 
         for prov_name, prov_config in prov_dict.items():

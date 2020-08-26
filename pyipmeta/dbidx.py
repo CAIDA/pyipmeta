@@ -91,6 +91,8 @@ class DbIdx:
         self._load_index()
 
     def _load_provider_config(self, provider):
+        if provider not in DbIdx.cfgs:
+            raise RuntimeError("Unknown provider '%s'" % provider)
         return DbIdx.cfgs[provider]
 
     def _load_index(self):
