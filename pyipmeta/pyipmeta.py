@@ -3,7 +3,9 @@ import dateutil.parser
 from . import dbidx
 import json
 import _pyipmeta
+import logging
 
+logger = logging.getLogger(__name__)
 
 class IpMeta:
 
@@ -43,6 +45,7 @@ class IpMeta:
             prov = self.ipm.get_provider_by_name(prov_name)
             if not prov:
                 raise ValueError("Invalid provider specified: '%s'" % prov_name)
+            logger.debug('enable_provider("%s", "%s")' % (prov_name, prov_config))
             if not self.ipm.enable_provider(prov, prov_config):
                 raise RuntimeError("Could not enable provider (check stderr)")
             self.prov.append(prov)
@@ -70,6 +73,9 @@ class IpMeta:
 
 
 def main():
+    logging.basicConfig(datefmt='%H:%M:%S',
+            format='[%(asctime)s.%(msecs)03d] %(levelname)s: %(message)s')
+
     parser = argparse.ArgumentParser(description="""
     Historical IP/Prefix Metadata tagging tool. Supports Maxmind and Net Acuity Edge
     """)
@@ -79,12 +85,17 @@ def main():
     parser.add_argument('-d', '--date',
         required=False,
         help="Date to use for automatic DB selection (default: latest DB)")
-
-    parser.add_argument('prefix', nargs='*', help='IP address or prefix to look up', default=[])
+    parser.add_argument('-l', '--loglevel',
+        required=False,
+        help="Logging level")
     parser.add_argument('-f', '--file',
         help="File with list of addresses/prefixes to look up")
+    parser.add_argument('prefix', nargs='*', help='IP address or prefix to look up', default=[])
 
     opts = vars(parser.parse_args())
+
+    if opts["loglevel"] is not None:
+        logger.setLevel(opts["loglevel"])
 
     ipm = IpMeta(providers=opts["provider"], time=opts["date"])
 
