@@ -14,38 +14,61 @@ class IpMeta:
                  time=None,
                  **kwargs
                  ):
-        self.ipm = _pyipmeta.IpMeta(**kwargs)
-        self.prov = list()
+        self.ipm_args = kwargs
+        self.target_time = self._parse_timestr(time)
 
-        parsed_time = self._parse_timestr(time)
+        logger.debug('pyipmeta __init__(%r, %r)', providers, time)
 
         if providers is None:
             # use all providers known by our helper
             providers = dbidx.DbIdx.all_providers()
 
-        prov_dict = dict()
+        self.prov_dict = dict()
         for arg in providers:
             args = arg.strip().split(None, 1)
+            if args[0] in self.prov_dict:
+                raise ValueError("Provider '%s' may not be repeated" % (args[0],))
+            self.prov_dict[args[0]] = dict()
             if len(args) == 2:
                 # "<name> <config>"
                 if time is not None:
                     raise ValueError("Only one of 'time' and 'provider_config' may be specified")
-                prov_dict[args[0]] = args[1]
+                self.prov_dict[args[0]] = { "auto": False, "cmd": args[1] }
             else:
                 # "<name>"
-                # use our helper to try and figure out the provider config
-                idx = dbidx.DbIdx(args[0])
-                prov_dict[args[0]] = idx.best_db(parsed_time, build_cmd=True)
+                # let reload() figure out the config
+                self.prov_dict[args[0]] = { "auto": True, "cmd": None }
+        self.reload(force_load=True)
 
-        for prov_name, prov_config in prov_dict.items():
+    def load(self):
+        new_ipm = _pyipmeta.IpMeta(**self.ipm_args)
+        for prov_name, prov_info in self.prov_dict.items():
             # configure the provider
-            prov = self.ipm.get_provider_by_name(prov_name)
+            prov = new_ipm.get_provider_by_name(prov_name)
             if not prov:
                 raise ValueError("Invalid provider specified: '%s'" % prov_name)
-            logger.debug('enable_provider("%s", "%s")' % (prov_name, prov_config))
-            if not self.ipm.enable_provider(prov, prov_config):
+            logger.debug('enable_provider("%s", "%s")' % (prov_name, prov_info["cmd"]))
+            if not new_ipm.enable_provider(prov, prov_info["cmd"]):
                 raise RuntimeError("Could not enable provider (check stderr)")
-            self.prov.append(prov)
+        self.ipm = new_ipm
+
+    def reload(self, force_load=False):
+        """Reload ipm if new db files are available.
+
+        If new db files are available for target_time for any providers marked
+        "auto", load a new ipm object to replace the existing one.
+        """
+        for prov_name, prov_info in self.prov_dict.items():
+            if prov_info["auto"]:
+                idx = dbidx.DbIdx(prov_name)
+                cmd = idx.best_db(self.target_time, build_cmd=True)
+                if cmd != prov_info["cmd"]:
+                    logger.info("need reload for %s: %r", prov_name, cmd)
+                    logger.debug("  (was: %r)", prov_info["cmd"])
+                    prov_info["cmd"] = cmd
+                    force_load = True
+        if force_load:
+            self.load()
 
     @staticmethod
     def _parse_timestr(timestr):
