@@ -78,7 +78,8 @@ def main():
     """)
     parser.add_argument('-p', '--provider',
         required=False, action='append',
-        help="Metadata provider to use ('netacq-edge' or 'maxmind') and its configuration (repeatable)")
+        help="Metadata provider name and configuration (repeatable).  Available providers: "
+            + ", ".join(name for name in dbidx.DbIdx.all_providers()))
     parser.add_argument('-d', '--date',
         required=False,
         help="Date to use for automatic DB selection (default: latest DB)")
