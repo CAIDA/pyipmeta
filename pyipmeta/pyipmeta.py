@@ -4,6 +4,7 @@ from . import dbidx
 import json
 import _pyipmeta
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,9 @@ class IpMeta:
                  ):
         self.ipm_args = kwargs
         self.target_time = self._parse_timestr(time)
+        self.reload_period = 10*60 # 10 minutes
+        self.reloader_stop = None
+        self.reloader_thread = None
 
         logger.debug('pyipmeta __init__(%r, %r)', providers, time)
 
@@ -36,11 +40,34 @@ class IpMeta:
                 self.prov_dict[args[0]] = { "auto": False, "cmd": args[1] }
             else:
                 # "<name>"
-                # let reload() figure out the config
+                # let _reload() figure out the config
                 self.prov_dict[args[0]] = { "auto": True, "cmd": None }
-        self.reload(force_load=True)
+        self._reload(force_load=True)
+        if self.target_time is None and self.reload_period is not None:
+            self.reloader_stop = threading.Event()
+            self.reloader_thread = threading.Thread(target=self._periodic_reload,
+                    daemon=True)
+            self.reloader_thread.start()
 
-    def load(self):
+    def _periodic_reload(self):
+        """Periodically check for new data and reload if needed."""
+        while not self.reloader_stop.wait(self.reload_period):
+            logger.debug("_periodic_reload reloading")
+            self._reload()
+        logger.debug("_periodic_reload stopped")
+
+    def stop(self):
+        """Stop the background reloader thread."""
+        if self.reloader_stop is not None:
+            self.reloader_stop.set()
+
+    def _load(self):
+        """Load ipm according to prov_dict.
+
+        Loading is done into a second ipm object; when done, the new object
+        atomically replaces the old, so this is safe to call in a thread while
+        other threads read from ipm.
+        """
         new_ipm = _pyipmeta.IpMeta(**self.ipm_args)
         for prov_name, prov_info in self.prov_dict.items():
             # configure the provider
@@ -52,7 +79,7 @@ class IpMeta:
                 raise RuntimeError("Could not enable provider (check stderr)")
         self.ipm = new_ipm
 
-    def reload(self, force_load=False):
+    def _reload(self, force_load=False):
         """Reload ipm if new db files are available.
 
         If new db files are available for target_time for any providers marked
@@ -68,7 +95,9 @@ class IpMeta:
                     prov_info["cmd"] = cmd
                     force_load = True
         if force_load:
-            self.load()
+            self._load()
+        else:
+            logger.debug("no reload needed")
 
     @staticmethod
     def _parse_timestr(timestr):
