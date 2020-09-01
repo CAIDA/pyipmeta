@@ -5,6 +5,7 @@ import json
 import _pyipmeta
 import logging
 import threading
+import weakref
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,8 @@ class IpMeta:
         self.target_time = self._parse_timestr(time)
         self.reload_period = 10*60 # 10 minutes
         self.reloader_stop = None
-        self.reloader_thread = None
 
-        logger.debug('pyipmeta __init__(%r, %r)', providers, time)
+        logger.debug('IpMeta.__init__(%r, %r)', providers, time)
 
         if providers is None:
             # use all providers known by our helper
@@ -43,23 +43,36 @@ class IpMeta:
                 # let _reload() figure out the config
                 self.prov_dict[args[0]] = { "auto": True, "cmd": None }
         self._reload(force_load=True)
+
         if self.target_time is None and self.reload_period is not None:
             self.reloader_stop = threading.Event()
-            self.reloader_thread = threading.Thread(target=self._periodic_reload,
-                    daemon=True)
-            self.reloader_thread.start()
+            reloader_thread = threading.Thread(target=IpMeta._periodic_reload,
+                    args=(weakref.ref(self),), daemon=True)
+            reloader_thread.start()
 
-    def _periodic_reload(self):
-        """Periodically check for new data and reload if needed."""
-        while not self.reloader_stop.wait(self.reload_period):
-            logger.debug("_periodic_reload reloading")
-            self._reload()
-        logger.debug("_periodic_reload stopped")
-
-    def stop(self):
-        """Stop the background reloader thread."""
-        if self.reloader_stop is not None:
+    def __del__(self):
+        logger.debug("IpMeta.__del__()")
+        # stop the reloader_thread immediately
+        if self.reloader_stop:
             self.reloader_stop.set()
+
+    @staticmethod
+    def _periodic_reload(ref):
+        """Periodically check for new data and reload if needed."""
+        # This method never holds a strong reference to the IpMeta object for
+        # very long, so it doesn't prevent the object from being deleted.
+        reload_period = ref().reload_period
+        reloader_stop = ref().reloader_stop
+        logger.debug("_periodic_reload started")
+        while not reloader_stop.wait(reload_period):
+            ipm = ref()
+            if ipm is None:
+                break
+            logger.debug("_periodic_reload reloading")
+            ipm._reload()
+            reload_period = ipm.reload_period
+            ipm = None  # release the strong reference
+        logger.debug("_periodic_reload stopped")
 
     def _load(self):
         """Load ipm according to prov_dict.
