@@ -32,5 +32,7 @@ setup(name="pyipmeta",
       ]},
       install_requires=[
           "python-dateutil",
+          "python-keystoneclient",
+          "python-swiftclient",
           ]
       )
