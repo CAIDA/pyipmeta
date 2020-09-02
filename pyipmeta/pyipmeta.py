@@ -1,3 +1,4 @@
+import os
 import argparse
 import dateutil.parser
 from . import dbidx
@@ -8,6 +9,8 @@ import threading
 import weakref
 
 logger = logging.getLogger(__name__)
+logger.setLevel(os.getenv('PYIPMETA_LOGLEVEL', 'INFO'))
+
 
 class IpMeta:
 
