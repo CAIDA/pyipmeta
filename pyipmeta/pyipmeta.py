@@ -127,7 +127,7 @@ class IpMeta:
                 raise ValueError("Invalid provider '%s'" % name)
             if must_be_enabled and not prov.enabled:
                 raise ValueError("Provider '%s' is not enabled" % name)
-            mask = mask | (1 << (prov.id - 1))
+            mask = mask | prov.mask
         return mask
 
     def lookup(self, ipaddr, provmask=0):
