@@ -213,8 +213,13 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
 
   PyObject *pyrec = NULL;
 
-  if (ipmeta_lookup(self->ipm, pyaddrstr, provmask, self->recordset) < 0) {
-    PyErr_SetString(PyExc_RuntimeError, "Failed to lookup address or prefix");
+  int rc = ipmeta_lookup(self->ipm, pyaddrstr, provmask, self->recordset);
+  if (rc < 0) {
+    if (rc == IPMETA_ERR_INPUT) {
+      PyErr_Format(PyExc_ValueError, "Invalid address or prefix '%s'", pyaddrstr);
+    } else {
+      PyErr_SetString(PyExc_RuntimeError, "Internal error");
+    }
     goto err;
   }
   ipmeta_record_set_rewind(self->recordset);
