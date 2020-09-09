@@ -4,7 +4,7 @@
  * CAIDA, UC San Diego
  * corsaro-info@caida.org
  *
- * Copyright (C) 2012 The Regents of the University of California.
+ * Copyright (C) Copyright (C) 2017-2020 The Regents of the University of California.
  * Authors: Alistair King
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -27,6 +27,12 @@
 #include <libipmeta.h>
 
 #define PYSTR_SAFE(cstr) ((cstr) ? PYSTR_FROMSTR(cstr) : PYSTR_FROMSTR(""))
+
+/* source_name */
+static PyObject *get_source(ipmeta_record_t *rec)
+{
+  return Py_BuildValue("i", rec->source);
+}
 
 /* ID */
 static PyObject *get_id(ipmeta_record_t *rec)
@@ -156,6 +162,7 @@ _pyipmeta_record_as_dict(ipmeta_record_t *rec, uint32_t num_ips)
   if (dict == NULL)
     return NULL;
 
+  add_to_dict(dict, "source", get_source(rec));
   add_to_dict(dict, "id", get_id(rec));
   add_to_dict(dict, "country_code", get_country_code(rec));
   add_to_dict(dict, "continent_code", get_continent_code(rec));

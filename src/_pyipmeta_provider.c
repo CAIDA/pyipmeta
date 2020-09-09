@@ -4,7 +4,7 @@
  * CAIDA, UC San Diego
  * corsaro-info@caida.org
  *
- * Copyright (C) 2012 The Regents of the University of California.
+ * Copyright (C) Copyright (C) 2017-2020 The Regents of the University of California.
  * Authors: Alistair King
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -65,6 +65,14 @@ Provider_get_id(ProviderObject *self, void *closure)
   return Py_BuildValue("i", ipmeta_get_provider_id(self->prov));
 }
 
+/* mask */
+static PyObject *
+Provider_get_mask(ProviderObject *self, void *closure)
+{
+  return Py_BuildValue("i",
+      IPMETA_PROV_TO_MASK(ipmeta_get_provider_id(self->prov)));
+}
+
 /* name */
 static PyObject *
 Provider_get_name(ProviderObject *self, void *closure)
@@ -107,6 +115,14 @@ static PyGetSetDef Provider_getsetters[] = {
     "id",
     (getter)Provider_get_id, NULL,
     "ID",
+    NULL
+  },
+
+  /* mask */
+  {
+    "mask",
+    (getter)Provider_get_mask, NULL,
+    "Mask",
     NULL
   },
 

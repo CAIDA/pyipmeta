@@ -9,7 +9,7 @@ _pyipmeta_module = Extension("_pyipmeta",
 
 setup(name="pyipmeta",
       description="A Python interface to libipmeta",
-      version="3.0.0",
+      version="3.1.0",
       author="Alistair King",
       author_email="corsaro-info@caida.org",
       url="http://github.com/CAIDA/pyipmeta",
@@ -32,5 +32,7 @@ setup(name="pyipmeta",
       ]},
       install_requires=[
           "python-dateutil",
+          "python-keystoneclient",
+          "python-swiftclient",
           ]
       )

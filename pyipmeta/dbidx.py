@@ -1,112 +1,148 @@
-import datetime
+import os
+import dateutil
 import re
 import sys
 import subprocess
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen
+from swiftclient.service import SwiftService, SwiftError
 
-# TODO: allow customization of built commands (e.g., no polygon table?)
-# TODO: allow use of special "latest" db
-# TODO: switch to using swift
-# TODO: add support for pfx2as
 
+def _parse_filename(filename, pattern):
+    match = re.match(pattern, filename)
+    if not match:
+        return None, None, filename
+    date = dateutil.parser.parse(match.group('date'))
+    table = match.group('table').lower()
+    return date, table, filename
+
+def _build_cmd(db, cmd):
+    return " ".join([subcmd[0] % db[subcmd[1]]
+        for subcmd in cmd if subcmd[1] in db])
 
 class DbIdx:
+    cfgs = {
+#        # configuration format
+#        <provider-name>: [
+#            One or more container descriptions:
+#            {
+#                "container": <name-of-swift-container>,
+#                "pattern": regexp to match object (file) name; must contain
+#                    "(?P<date>...)" and "(?P<table>...)"
+#                "cmd": [
+#                    list of (fmt, tablename, required) tuples.
+#                    For each tuple, if the object corresponding to tablename
+#                    exists for the given date, it is subbed into the fmt
+#                    string.  All the generated strings are concatenated to
+#                    form an ipmeta provider command string.  If the object
+#                    does not exist for the given date, and required=False,
+#                    the table is skipped; if required=True, the entire date
+#                    is skipped.
+#                ],
+#            },
+#        ],
+        "netacq-edge": [
+            {
+                "container": "datasets-external-netacq-edge-processed",
+                # e.g., 2017-03-16.netacq-4-blocks.csv.gz
+                "pattern": r"(?P<date>\d+-\d+-\d+)\.netacq-4-(?P<table>.+)\.csv\.gz",
+                "cmd": [
+                    ("-l %s", "locations", True),
+                    ("-b %s", "blocks",    True),
+                    ("-6 %s", "ipv6",      False),
+                ],
+            },
+        ],
+        "maxmind": [
+            {   # maxmind v1
+                "container": "datasets-external-maxmind-city-v4",
+                # e.g., 2015-02-16.GeoLiteCity-Blocks.csv.gz
+                "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLiteCity-(?P<table>.+)\.csv\.gz",
+                "cmd": [
+                    ("-b %s", "blocks",   True),
+                    ("-l %s", "location", True),
+                ],
+            },
+#           {   # maxmind v2 (note: It's ok to enable both v1 and v2.)
+#               "container": "datasets-external-maxmind-city2",
+#               # e.g., 2020-08-19.GeoLite2-City-Blocks-IPv6.csv.gz
+#               "pattern": r"(?P<date>\d+-\d+-\d+)\.GeoLite2-City-(?P<table>.+)\.csv\.gz",
+#               "cmd": [
+#                   ("-b %s", "blocks-ipv4",  True),
+#                   ("-b %s", "blocks-ipv6",  True),
+#                   ("-l %s", "locations-en", True),
+#               ],
+#           },
+        ],
+        "pfx2as": [
+            {
+                "container": "datasets-routing-routeviews-prefix2as",
+                # e.g., 2020/08/routeviews-rv2-20200823-2200.pfx2as.gz
+                "pattern": r"\d+/\d+/routeviews-rv2-(?P<date>\d{8})-\d+\.(?P<table>pfx2as)\.gz",
+                "cmd": [("-f %s", "pfx2as", True)],
+            },
+        ],
+    }
 
     def __init__(self, provider):
+        self.prov_name = provider
         self.prov_cfg = self._load_provider_config(provider)
         self.latest_time = None
-        self.dbs = {}
-        self._load_dbs()
+        self.dbs = {}    # time -> table name -> file name
+        self.dbcfgs = {} # time -> db config info
+        self._load_index()
 
     def _load_provider_config(self, provider):
-        server = "http://loki.caida.org:3282"
-        cfgs = {
-            "netacq-edge": {
-                "file_pfx": server + "/netacuity-dumps/Edge-processed",
-                "filelist": "md5.md5",
-                "name_parser": self.parse_netacq_filename,
-                "cmd_builder": self.build_netacq_cmd,
-                "tables_required": ["blocks", "locations", "polygons"],
-            },
-            "maxmind": {
-                "file_pfx": server + "/maxmind-geolite-dumps/city-v4",
-                "filelist": "md5.md5",
-                "name_parser": self.parse_maxmind_filename,
-                "cmd_builder": self.build_maxmind_cmd,
-                "tables_required": ["blocks", "location"],
-            },
-        }
-        return cfgs[provider]
+        if provider not in DbIdx.cfgs:
+            raise RuntimeError("Unknown provider '%s'" % provider)
+        return DbIdx.cfgs[provider]
 
-    def _load_dbs(self):
-        for line in urlopen("%s/%s" % (self.prov_cfg["file_pfx"],
-                                               self.prov_cfg["filelist"])):
-            line = line.decode('utf-8')
-            (filename, chksum) = line.strip().split(" ")
-            (date, table, filename) = self.prov_cfg["name_parser"](filename)
-            if not date:
-                continue
-            if date not in self.dbs:
-                self.dbs[date] = {}
-            self.dbs[date][table] = "%s/%s" % (self.prov_cfg["file_pfx"], filename)
-            self.latest_time = date if self.latest_time is None else max(self.latest_time, date)
+    def _load_index(self):
+        swift_opts = {
+            # Apparently SwiftService by default checks only ST_AUTH_VERSION.
+            # We emulate the swift CLI, and check three different variables.
+            "auth_version": os.environ.get('ST_AUTH_VERSION',
+                os.environ.get('OS_AUTH_VERSION',
+                os.environ.get('OS_IDENTITY_API_VERSION', '1.0'))),
+            }
+        with SwiftService(options=swift_opts) as swift:
+            for cfg in self.prov_cfg:
+                try:
+                    list_parts_gen = swift.list(container=cfg["container"])
+                    for page in list_parts_gen:
+                        if not page["success"]:
+                            raise page["error"]
+                        for item in page["listing"]:
+                            (date, table, filename) = _parse_filename(item["name"],
+                                    cfg["pattern"])
+                            if not date:
+                                continue
+                            self.dbcfgs[date] = cfg
+                            # format the name as expected by libipmeta/wandio
+                            self.dbs.setdefault(date, {})[table] = \
+                                "swift://%s/%s" % (cfg["container"], filename)
+                            if self.latest_time is None or date > self.latest_time:
+                                self.latest_time = date
+                except SwiftError as e:
+                    # logger.error(e.value)
+                    raise e
+
+    @staticmethod
+    def all_providers():
+        return DbIdx.cfgs.keys()
 
     def best_db(self, time=None, build_cmd=False):
         if time is None:
             time = self.latest_time
-            dbs = self.dbs[time]
-        else:
-            best_time = None
-            for t in self.dbs:
-                # are all the required files available?
-                ok = True
-                for tbl in self.prov_cfg["tables_required"]:
-                    if tbl not in self.dbs[t]:
-                        ok = False
-                        break
-                if not ok:
-                    continue
-                # is this the best time we've seen so far?
-                if t < time and (not best_time or best_time < t):
-                    best_time = t
-            dbs = self.dbs[best_time]
-
-        return dbs if not build_cmd else self.prov_cfg["cmd_builder"](dbs)
-
-    def latest_db(self, build_cmd=False):
-        return self.best_db(build_cmd=build_cmd)
-
-    @staticmethod
-    def parse_netacq_filename(filename):
-        # 2017-03-16.netacq-4-polygons.csv.gz
-        match = re.match(r"(\d+-\d+-\d+)\.netacq-4-(.+)\.csv\.gz", filename)
-        if not match:
-            return None, None, filename
-        date_str = match.group(1)
-        date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-        table = match.group(2)
-        return date, table, filename
-
-    @staticmethod
-    def build_netacq_cmd(dbs):
-        return "-b %s -l %s" % (dbs["blocks"], dbs["locations"])
-
-    @staticmethod
-    def build_maxmind_cmd(dbs):
-        return "-b %s -l %s" % (dbs["blocks"], dbs["location"])
-
-    @staticmethod
-    def parse_maxmind_filename(filename):
-        # 2015-02-16.GeoLiteCity-Blocks.csv.gz
-        match = re.match(r"(\d+-\d+-\d+)\.GeoLiteCity-(.+)\.csv\.gz", filename)
-        if not match:
-            return None, None, filename
-        date_str = match.group(1)
-        date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-        table = match.group(2).lower()
-        return date, table, filename
+        best_time = None
+        for t in self.dbs:
+            # are all the required files available?
+            cfg = self.dbcfgs[t]
+            if not all([subcmd[1] in self.dbs[t] for subcmd in cfg["cmd"] if subcmd[2]]):
+                continue
+            # is this the best time we've seen so far?
+            if t <= time and (not best_time or best_time < t):
+                best_time = t
+        if not best_time:
+            raise RuntimeError("No complete datasets for %s" % (self.prov_name))
+        best_db = self.dbs[best_time]
+        cfg = self.dbcfgs[best_time]
+        return best_db if not build_cmd else _build_cmd(best_db, cfg["cmd"])

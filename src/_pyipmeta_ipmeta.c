@@ -4,7 +4,7 @@
  * CAIDA, UC San Diego
  * corsaro-info@caida.org
  *
- * Copyright (C) 2012 The Regents of the University of California.
+ * Copyright (C) Copyright (C) 2017-2020 The Regents of the University of California.
  * Authors: Alistair King
  *
  * This program is free software; you can redistribute it and/or modify it under
@@ -200,8 +200,9 @@ static PyObject *
 IpMeta_lookup(IpMetaObject *self, PyObject *args)
 {
   const char *pyaddrstr = NULL;
+  int provmask = 0;
   /* get the prefix/address argument */
-  if (!PyArg_ParseTuple(args, "s", &pyaddrstr)) {
+  if (!PyArg_ParseTuple(args, "s|i", &pyaddrstr, &provmask)) {
     return NULL;
   }
 
@@ -212,8 +213,13 @@ IpMeta_lookup(IpMetaObject *self, PyObject *args)
 
   PyObject *pyrec = NULL;
 
-  if (ipmeta_lookup(self->ipm, pyaddrstr, 0, self->recordset) < 0) {
-    PyErr_SetString(PyExc_RuntimeError, "Failed to lookup address or prefix");
+  int rc = ipmeta_lookup(self->ipm, pyaddrstr, provmask, self->recordset);
+  if (rc < 0) {
+    if (rc == IPMETA_ERR_INPUT) {
+      PyErr_Format(PyExc_ValueError, "Invalid address or prefix '%s'", pyaddrstr);
+    } else {
+      PyErr_SetString(PyExc_RuntimeError, "Internal error");
+    }
     goto err;
   }
   ipmeta_record_set_rewind(self->recordset);
