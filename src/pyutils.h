@@ -41,7 +41,8 @@
 #endif
 
 #if PY_MAJOR_VERSION > 2
-#define PYSTR_FROMSTR(str) PyUnicode_FromString(str)
+// Unlike PyUnicode_FromString(str), this will gracefully handle invalid utf8
+#define PYSTR_FROMSTR(str) PyUnicode_DecodeUTF8(str, strlen(str), "replace")
 #define PYSTR_FORMAT(str, arg_tuple) PyUnicode_Format(str, arg_tuple)
 #define PYNUM_FROMLONG(num) PyLong_FromLong(num)
 #else
