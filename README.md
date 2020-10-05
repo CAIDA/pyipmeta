@@ -27,7 +27,7 @@ If you prefer to install in a virtual environment, and also want libipmeta
 installed in that virtual environment, then:
 
 1. Activate the virtual environment
-2. When building libipemta, add `--prefix=$VIRTUAL_ENV` to the `./configure` command
+2. When building libipmeta, add `--prefix=$VIRTUAL_ENV` to the `./configure` command
 3. When building pyipmeta, replace the `build_ext` command with `LD_RUN_PATH=$VIRTUAL_ENV python setup.py build_ext -I $VIRTUAL_ENV/include -L $VIRTUAL_ENV/lib`
 
 ## Usage
