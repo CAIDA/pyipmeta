@@ -4,9 +4,11 @@
 # Tue, 13 Aug 2019 13:42:49 -0700
 export PYBUILD_NAME=pyipmeta
 export PYBUILD_DISABLE=test
+# don't install script for the python2 package, could clobber the python3 one
+export PYBUILD_AFTER_INSTALL_python2=rm -f {destdir}/usr/bin/pyipmeta-lookup
+
 %:
-# 	dh $@ --with python2,python3 --buildsystem=pybuild
-	dh $@ --with python2 --buildsystem=pybuild
+	dh $@ --with python2,python3 --buildsystem=pybuild
 
 override_dh_auto_install:
 	dh_auto_install
