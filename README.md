@@ -6,8 +6,8 @@ and (ii) prefix to ASN metadata using CAIDA's prefix2AS datasets.
 ## Pre-requisites
 Before installing PyIPMeta, you will need:
   - [libipmeta (>= 3.1.0)](https://github.com/CAIDA/libipmeta)
-  - Python setuptools (`sudo apt install python-setuptools` on Ubuntu)
-  - Python development headers (`sudo apt install python-dev` on Ubuntu)
+  - Python setuptools (`sudo apt install python3-setuptools` on Ubuntu)
+  - Python development headers (`sudo apt install python3-dev` on Ubuntu)
 
 ## Install PyIPMeta
 
@@ -17,11 +17,11 @@ First, either clone this GitHub repo, or download the latest
 Then,
 
  ```
- $ python setup.py build_ext
- # python setup.py install
+ $ python3 setup.py build_ext
+ # python3 setup.py install
  ```
 
-_Note:_ use `python setup.py install --user` to install the library in
+_Note:_ use `python3 setup.py install --user` to install the library in
 your home directory.
 
 If you prefer to install in a virtual environment, and also want libipmeta
@@ -29,7 +29,7 @@ installed in that virtual environment, then:
 
 1. Activate the virtual environment
 2. When building libipmeta, add `--prefix=$VIRTUAL_ENV` to the `./configure` command
-3. When building pyipmeta, replace the `build_ext` command with `LD_RUN_PATH=$VIRTUAL_ENV python setup.py build_ext -I $VIRTUAL_ENV/include -L $VIRTUAL_ENV/lib`
+3. When building pyipmeta, replace the `build_ext` command with `LD_RUN_PATH=$VIRTUAL_ENV python3 setup.py build_ext -I $VIRTUAL_ENV/include -L $VIRTUAL_ENV/lib`
 
 ## Usage
 

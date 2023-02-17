@@ -74,7 +74,8 @@ class IpMeta:
         if self.target_time is None and self.reload_period is not None:
             self.reloader_stop = threading.Event()
             reloader_thread = threading.Thread(target=IpMeta._periodic_reload,
-                    args=(weakref.ref(self),), daemon=True)
+                    args=(weakref.ref(self),))
+            reloader_thread.daemon = True
             reloader_thread.start()
 
     def __del__(self):
