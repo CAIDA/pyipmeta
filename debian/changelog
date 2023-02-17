@@ -1,3 +1,9 @@
+pyipmeta (3.2.1) unstable; urgency=medium
+
+  * PyIPMeta 3.2.1
+
+ -- Brendon Jones <software@caida.org>  Fri, 17 Feb 2023 14:44:26 +1300
+
 pyipmeta (3.2.0) unstable; urgency=medium
 
   * PyIPMeta 3.2.0
