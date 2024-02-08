@@ -3,18 +3,9 @@ Maintainer: CAIDA Software Maintainer <software@caida.org>
 Section: python
 Priority: optional
 Build-Depends: dh-python, debhelper (>= 9), libipmeta2-dev (>= 3.1.0),
-  python-setuptools, python3-setuptools,
-  python-all-dev, python3-all-dev,
-  python-dateutil, python3-dateutil
+  python3-setuptools, python3-all-dev, python3-dateutil
 Standards-Version: 3.9.6
 Homepage: https://github.com/CAIDA/pyipmeta
-
-Package: python-pyipmeta
-Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
-Description: Python interface to libipmeta
- Provides a high-level interface for live and historical BGP data
- analysis.
 
 Package: python3-pyipmeta
 Architecture: any
